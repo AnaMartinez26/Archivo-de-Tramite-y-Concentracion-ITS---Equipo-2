@@ -15,4 +15,11 @@ También se contemplarán mecanismos de autenticación, control de permisos y re
 
 Con la implementación de este sistema se busca reducir la dependencia de los procesos manuales y del soporte físico, agilizar la consulta de información, optimizar los tiempos de atención de solicitudes internas y fortalecer la seguridad, integridad y trazabilidad de los documentos. De esta manera, el proyecto contribuirá a la modernización de los procesos administrativos del Departamento de Recursos Humanos y al manejo más eficiente y controlado del patrimonio documental de la institución. 
 
+## Tecnologías Utilizadas:
+- Visual Studio Code.
+- Claude.
+- Gemini.
+- Project Libre.
+- Visual Paradigm.
+- DBDesigner.
 

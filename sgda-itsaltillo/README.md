@@ -1,32 +1,18 @@
-# SGDA – Instituto Tecnológico de Saltillo
+# Sistema de Gestión Digital de Archivos para el Archivo de Concentración del Instituto Tecnológico de Saltillo - Equipo #2
 
-**Para usar el sistema:** abre `sgda-itsaltillo.html` con doble clic en cualquier navegador. No requiere terminal ni internet.
 
-## Estructura del código (`src/`)
+## Integrantes:
+- Jesús Hilario Arellano Martínez
+- Natalia Ximena Castillo Pérez
+- Ana Paola Martínez Hernández
+- Ángel Imanol Velázquez Hernández
 
-```
-src/
-├── main.jsx · App.jsx            Arranque y rutas
-├── core/                         Piezas compartidas (menú, tablas, formularios, router, iconos)
-│   ├── ModulePage.jsx            Pantalla genérica que se arma con la config de cada módulo
-│   └── helpers.js                f() = campo de formulario, c() = columna de tabla
-├── paginas/
-│   ├── login/                    Iniciar sesión
-│   └── inicio/                   Pantalla de inicio
-├── modulos/                      UNA CARPETA POR MÓDULO
-│   ├── index.js                  Orden de los módulos en el menú lateral
-│   ├── usuarios/                 Gestión de Usuarios
-│   ├── clasificacion/            Jerarquización de Información  (+ TreeView.jsx)
-│   ├── etiquetado/               Clasificación y Etiquetado     (+ Marbete.jsx)
-│   ├── prestamos/                Trazabilidad y Control de Salidas
-│   ├── digitalizacion/           Digitalización y Resguardo     (+ FileUpload.jsx, PDFPreview.jsx)
-│   ├── almacenamiento/           Almacenamiento Sistematizado   (+ StorageMap.jsx)
-│   ├── workflow/                 Control de Flujo de Información (+ Timeline.jsx)
-│   ├── vigencias/                Vigencias Documentales         (+ Legend.jsx)
-│   ├── auditoria/                Aseguramiento y Cumplimiento   (+ Integrity.jsx)
-│   ├── disposicion/              Disposición Documental
-│   └── configuracion/            Configuración
-├── assets/ · styles/
-```
+## Descripción del Proyecto:
+El proyecto contempla la digitalización del acervo documental mediante la generación y asociación de réplicas digitales de los documentos físicos, así como el diseño de una estructura de clasificación y organización que facilite la identificación y localización de los expedientes. Asimismo, se desarrollará un módulo de control de entradas y salidas que permita registrar las solicitudes de expedientes, los usuarios responsables, las fechas de movimiento y los pases de salida, fortaleciendo la trazabilidad y reduciendo el riesgo de extravío o pérdida de documentación. 
 
-Cada carpeta de módulo tiene su `<modulo>.config.js` (campos, columnas y botones) y, si lo necesita, sus componentes propios.
+De igual manera, el sistema incorporará mecanismos para apoyar la gestión del ciclo de vida documental, tomando como referencia el Catálogo de Disposición Documental, con el propósito de identificar los expedientes que hayan cumplido con sus periodos de conservación y facilitar una depuración controlada conforme a la normativa aplicable. 
+También se contemplarán mecanismos de autenticación, control de permisos y registro de actividades para restringir el acceso a la información de acuerdo con las funciones de cada usuario. 
+
+Con la implementación de este sistema se busca reducir la dependencia de los procesos manuales y del soporte físico, agilizar la consulta de información, optimizar los tiempos de atención de solicitudes internas y fortalecer la seguridad, integridad y trazabilidad de los documentos. De esta manera, el proyecto contribuirá a la modernización de los procesos administrativos del Departamento de Recursos Humanos y al manejo más eficiente y controlado del patrimonio documental de la institución. 
+
+

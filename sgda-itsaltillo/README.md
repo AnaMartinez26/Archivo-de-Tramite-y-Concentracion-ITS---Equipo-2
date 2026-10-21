@@ -30,7 +30,3 @@ src/
 ```
 
 Cada carpeta de módulo tiene su `<modulo>.config.js` (campos, columnas y botones) y, si lo necesita, sus componentes propios.
-
-## Si modificas el código
-1. `npm install` (una sola vez)
-2. `npm run build` → regenera `sgda-itsaltillo.html`

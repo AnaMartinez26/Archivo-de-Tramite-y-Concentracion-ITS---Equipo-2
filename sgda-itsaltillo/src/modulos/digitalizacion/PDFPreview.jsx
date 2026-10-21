@@ -1,0 +1,1 @@
+export function PDFPreview({url}){return <div className="card pad"><h3>Vista previa del documento PDF</h3>{url?<iframe title="Vista previa PDF" src={url} className="pdf"/>:<div className="pdf none">No hay documento cargado</div>}</div>}

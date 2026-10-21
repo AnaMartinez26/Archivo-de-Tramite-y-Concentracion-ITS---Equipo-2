@@ -1,0 +1,4 @@
+import {Link} from '../../core/router.jsx';import {Icon} from '../../core/ui.jsx';import {PageTitle} from '../../core/layout.jsx';import {MODS} from '../../modulos/index.js';
+export default function Dashboard(){return <><PageTitle title="Sistema de Gestión Digital de Archivos" sub="Pantalla de inicio · Archivo de Concentración del Instituto Tecnológico de Saltillo"/>
+ <div className="grid3">{['Expedientes','Préstamos activos','Alertas de vencimiento'].map(t=><div key={t} className="card pad stat"><small>{t}</small><b>—</b><span>Sin datos</span></div>)}</div>
+ <h2>Acceso a módulos</h2><div className="grid3"><Link to="/login" className="card pad mod"><Icon n="LogIn" size={26}/><b>Iniciar Sesión</b><span>Pantalla de acceso</span></Link>{MODS.filter(m=>m.cu).map(m=><Link key={m.path} to={m.path} className="card pad mod"><Icon n={m.icon} size={26}/><small>{m.cu}</small><b>{m.title}</b><span>{m.sub}</span></Link>)}</div></>}

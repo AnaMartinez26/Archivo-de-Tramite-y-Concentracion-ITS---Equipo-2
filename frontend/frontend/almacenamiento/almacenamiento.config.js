@@ -1,4 +1,4 @@
-import {f,c,ESTADO} from '../../core/helpers.js';
+import {f,c,ESTADO} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Almacenamiento Sistematizado
 export default {path:'/almacenamiento',title:'Almacenamiento Sistematizado',sub:'Ubicación Física',icon:'Warehouse',extra:'map',select:1,

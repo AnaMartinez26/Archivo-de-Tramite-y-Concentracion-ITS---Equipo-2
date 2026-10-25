@@ -1,4 +1,4 @@
-import {f,c} from '../../core/helpers.js';
+import {f,c} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Aseguramiento y Cumplimiento Normativo
 export default {path:'/auditoria',title:'Aseguramiento y Cumplimiento Normativo',sub:'Bitácora de auditoría e integridad',icon:'ShieldCheck',extra:'integrity',

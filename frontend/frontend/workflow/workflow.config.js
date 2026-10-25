@@ -1,4 +1,4 @@
-import {f,c,ID} from '../../core/helpers.js';
+import {f,c,ID} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Control de Flujo de Información
 export default {path:'/workflow',title:'Control de Flujo de Información',sub:'Workflow de Aprobación',icon:'GitBranch',extra:'timeline',select:1,

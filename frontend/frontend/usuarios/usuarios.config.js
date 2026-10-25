@@ -1,4 +1,4 @@
-import {f,c,ESTADO,ROLES,ID} from '../../core/helpers.js';
+import {f,c,ESTADO,ROLES,ID} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Gestión de Usuarios
 export default {path:'/usuarios',title:'Gestión de Usuarios',sub:'Usuarios, roles y trabajadores',icon:'Users',modal:'Registrar Nuevo Usuario',

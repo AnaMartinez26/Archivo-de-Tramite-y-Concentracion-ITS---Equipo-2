@@ -1,4 +1,4 @@
-import {f,c} from '../../core/helpers.js';
+import {f,c} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Digitalización y Resguardo
 export default {path:'/digitalizacion',title:'Digitalización y Resguardo',sub:'Documentos y réplicas digitales',icon:'ScanLine',extra:'upload',select:1,

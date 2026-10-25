@@ -1,4 +1,4 @@
-import {f,c,ESTADO} from '../../core/helpers.js';
+import {f,c,ESTADO} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Clasificación y Etiquetado Documental
 export default {path:'/etiquetado',title:'Clasificación y Etiquetado Documental',sub:'Expediente y marbete',icon:'Tags',extra:'label',

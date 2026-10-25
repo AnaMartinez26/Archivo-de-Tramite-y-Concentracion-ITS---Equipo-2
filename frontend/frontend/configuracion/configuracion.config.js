@@ -1,4 +1,4 @@
-import {f} from '../../core/helpers.js';
+import {f} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Configuración
 export default {path:'/configuracion',cu:'',title:'Configuración',sub:'Parámetros generales del sistema',icon:'Settings',

@@ -1,4 +1,4 @@
-import {f,c} from '../../core/helpers.js';
+import {f,c} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Trazabilidad y Control de Salidas
 export default {path:'/prestamos',title:'Trazabilidad y Control de Salidas',sub:'Préstamos y Devoluciones',icon:'ArrowLeftRight',

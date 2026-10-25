@@ -1,4 +1,4 @@
-import {f,c} from '../../core/helpers.js';
+import {f,c} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Disposición Documental
 export default {path:'/disposicion',title:'Disposición Documental',sub:'Baja o Transferencia',icon:'Archive',select:1,

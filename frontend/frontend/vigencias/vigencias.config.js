@@ -1,4 +1,4 @@
-import {f,c} from '../../core/helpers.js';
+import {f,c} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Gestión de Vigencias Documentales
 export default {path:'/vigencias',title:'Gestión de Vigencias Documentales',sub:'Vigencia de expedientes y alertas',icon:'CalendarClock',extra:'badges',search:'Búsqueda por número de expediente',

@@ -1,4 +1,4 @@
-import {f,c,ID} from '../../core/helpers.js';
+import {f,c,ID} from '../sgda-itsaltillo/src/core/helpers.js';
 
 // Pantalla: Jerarquización de Información
 export default {path:'/clasificacion',title:'Jerarquización de Información',sub:'Cuadro General de Clasificación Archivística',icon:'Network',extra:'tree',select:1,

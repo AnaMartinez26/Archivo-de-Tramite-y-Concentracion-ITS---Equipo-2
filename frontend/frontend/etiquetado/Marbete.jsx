@@ -1,4 +1,4 @@
-import {Icon} from '../../core/ui.jsx';
+import {Icon} from '../sgda-itsaltillo/src/core/ui.jsx';
 export const QRPreview=({on})=><div className="qr" aria-label="Espacio QR"><Icon n="QrCode" size={40}/><small>{on?'QR listo para generarse':'Espacio reservado QR'}</small></div>;
 export const BarcodePreview=({on})=><div className="bar" aria-label="Espacio código de barras"><div className="bars"/><small>{on?'Código de barras listo para generarse':'Espacio reservado código de barras'}</small></div>;
 export function Marbete({v,fl}){const r=(l,x)=><div className="mr"><span>{l}</span><b>{x||'—'}</b></div>;

@@ -50,7 +50,7 @@ Thumbs.db
 .vs/
 
 backend.sln
-
+Backend.csproj.Backup.tmp
 
 ## Frontend (Node / npm)
 node_modules/

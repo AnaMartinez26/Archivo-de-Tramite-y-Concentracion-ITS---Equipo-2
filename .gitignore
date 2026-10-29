@@ -1,0 +1,57 @@
+## Compilación y salida de .NET
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+publish/
+
+## Visual Studio / VS Code / JetBrains Rider
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+launchSettings.json.user
+
+## Configuración sensible y secretos
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+.env
+*.env
+
+## Certificados y firmas electrónicas de prueba
+*.pfx
+*.key
+*.pem
+*.p12
+
+## Bases de datos locales y logs
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.sqlite
+[Ll]ogs/
+*.log
+
+## Carpetas de archivos/expedientes subidos en local (ajusta el nombre si usas una)
+Uploads/
+Archivos/
+Storage/
+
+## Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+.vscode/
+
+.vs/
+
+backend.sln
+Backend.csproj.Backup.tmp
+
+## Frontend (Node / npm)
+node_modules/
+dist/

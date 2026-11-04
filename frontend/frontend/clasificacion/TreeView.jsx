@@ -1,4 +1,4 @@
-import {Icon} from '../../core/ui.jsx';
+import {Icon} from '../sgda-itsaltillo/src/core/ui.jsx';
 const LV=['Fondo','Sección','Serie','Subserie'];
 export function TreeView({rows}){const kids=p=>rows.filter(r=>(r.padre||'')===p);
  const walk=(p,d)=>kids(p).flatMap(r=>[<li key={r.id} style={{marginLeft:d*22}}><span className="lv"><Icon n={d?'CornerDownRight':'Folder'}/> {LV[Math.min(d,3)]}</span><b className="node">{r.nombre}</b></li>,...walk(r.nombre,d+1)]);

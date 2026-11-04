@@ -1,0 +1,39 @@
+@Backend_HostAddress = http://localhost:5037
+@token = PEGA_AQUI_TU_TOKEN
+
+### 1. Login (obtiene el token JWT)
+POST {{Backend_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usuario": "admin@saltillo.tecnm.mx",
+  "password": "Admin123!"
+}
+
+### 2. Ver mis datos (requiere token)
+GET {{Backend_HostAddress}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### 3. Listar roles disponibles (requiere rol Administrador)
+GET {{Backend_HostAddress}}/api/usuarios/roles
+Authorization: Bearer {{token}}
+
+### 4. Registrar un nuevo usuario (requiere rol Administrador)
+POST {{Backend_HostAddress}}/api/usuarios
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "numEmpleado": 1001,
+  "nombre": "Ana",
+  "apellidoP": "López",
+  "apellidoM": "Ruiz",
+  "correo": "ana.lopez@saltillo.tecnm.mx",
+  "password": "Segura2026!",
+  "idRol": 2,
+  "estado": "Activo"
+}
+
+### 5. Listar todos los usuarios (requiere rol Administrador)
+GET {{Backend_HostAddress}}/api/usuarios
+Authorization: Bearer {{token}}

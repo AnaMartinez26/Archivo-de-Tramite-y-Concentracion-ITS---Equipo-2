@@ -1,9 +1,9 @@
 // Compila todo src/ en un solo archivo: sgda-itsaltillo.html (no necesitas ejecutarlo para USAR el sistema,
 // solo cuando modifiques el código). Uso:  npm install  &&  npm run build
 import {build} from 'esbuild';
-import {readFileSync,writeFileSync} from 'node:fs';
+import {writeFileSync} from 'node:fs';
 const out=await build({entryPoints:['src/main.jsx'],bundle:true,minify:true,format:'iife',jsx:'automatic',
-  loader:{'.png':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},outdir:'dist',write:false,logLevel:'warning'});
+  nodePaths:['node_modules'],loader:{'.png':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},outdir:'dist',write:false,logLevel:'warning'});
 let js='',css='';
 for(const f of out.outputFiles){if(f.path.endsWith('.js'))js=f.text;else if(f.path.endsWith('.css'))css=f.text}
 const html=`<!doctype html>

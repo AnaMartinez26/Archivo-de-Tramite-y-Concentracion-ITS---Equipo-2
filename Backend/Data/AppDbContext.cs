@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Rol> Roles { get; set; }
 
+    public DbSet<Documento> Documentos { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Carga automáticamente todas las clases de Data/Configurations

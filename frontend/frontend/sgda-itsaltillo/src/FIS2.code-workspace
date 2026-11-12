@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../../../../.."
+		},
+		{
+			"path": "../../../../../../FIS/Backend"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "FIS2"
+	}
+}

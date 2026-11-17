@@ -24,6 +24,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddSingleton<JwtHelper>();
 
+        services.AddScoped<IDocumentoRepository, DocumentoRepository>();
+        services.AddScoped<IDocumentoService, DocumentoService>();
+        services.AddSingleton<FileStorageHelper>();
+
         return services;
     }
 

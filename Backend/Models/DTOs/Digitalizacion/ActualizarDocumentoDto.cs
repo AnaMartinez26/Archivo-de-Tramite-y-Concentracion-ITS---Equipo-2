@@ -10,8 +10,7 @@ public class ActualizarDocumentoDto
     [StringLength(50)]
     public string? TipoDocumento { get; set; }
 
-    [StringLength(30)]
-    public string? NumeroExpediente { get; set; }
+    // TODO: agregar NumeroExpediente cuando exista la entidad Expediente.
 
     public DateTime? FechaCreacion { get; set; }
 }

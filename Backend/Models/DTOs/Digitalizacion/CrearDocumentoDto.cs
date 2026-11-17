@@ -13,8 +13,8 @@ public class CrearDocumentoDto
     [StringLength(50)]
     public string? TipoDocumento { get; set; }
 
-    [StringLength(30)]
-    public string? NumeroExpediente { get; set; }
+    // TODO: agregar NumeroExpediente cuando exista la entidad Expediente
+    //       (resolverlo a IdExpediente en DocumentoService).
 
     public DateTime? FechaCreacion { get; set; }
 }

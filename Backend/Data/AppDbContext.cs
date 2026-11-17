@@ -10,7 +10,6 @@ public class AppDbContext : DbContext
     // Una propiedad por tabla
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Rol> Roles { get; set; }
-
     public DbSet<Documento> Documentos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

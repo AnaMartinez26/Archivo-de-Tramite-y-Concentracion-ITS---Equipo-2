@@ -28,6 +28,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDocumentoService, DocumentoService>();
         services.AddSingleton<FileStorageHelper>();
 
+        services.AddScoped<ITramiteRepository, TramiteRepository>();
+        services.AddScoped<ITramiteService, TramiteService>();
+
+
         return services;
     }
 

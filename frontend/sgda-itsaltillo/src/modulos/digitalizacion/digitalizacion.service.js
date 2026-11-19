@@ -26,6 +26,7 @@ export async function crearDocumento(valores) {
       folio: String(valores.folio || '').trim(),
       titulo: String(valores.titulo || '').trim(),
       tipoDocumento: valores.tipo_documento ? String(valores.tipo_documento).trim() : null,
+      numeroExpediente: String(valores.numero_expediente || '').trim() || null,
       fechaCreacion: valores.fecha_creacion || null
     })
   });

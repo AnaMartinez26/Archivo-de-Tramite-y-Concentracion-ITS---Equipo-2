@@ -19,6 +19,14 @@ import {
   descargarArchivoPdfBlob,
   eliminarDocumentos
 } from '../modulos/digitalizacion/digitalizacion.service.js';
+import {
+  mapTramiteDto,
+  entradaLog,
+  construirLogInicial,
+  listarTramites,
+  crearTramite,
+  cambiarEstadoVarios
+} from '../modulos/workflow/workflow.service.js';
 import { TreeView } from '../modulos/clasificacion/TreeView.jsx';
 import { Marbete } from '../modulos/etiquetado/Marbete.jsx';
 import { FileUpload } from '../modulos/digitalizacion/FileUpload.jsx';
@@ -73,6 +81,17 @@ export default function ModulePage({ m }) {
           if (active) toast(ex?.message || 'Error al cargar documentos', 'err');
         }
       })();
+    } else if (m.path === '/workflow') {
+      (async () => {
+        try {
+          const tramites = await listarTramites();
+          if (!active) return;
+          setRows(tramites);
+          setLog(construirLogInicial(tramites));
+        } catch (ex) {
+          if (active) toast(ex?.message || 'Error al cargar trámites', 'err');
+        }
+      })();
     }
 
     return () => {
@@ -94,13 +113,14 @@ export default function ModulePage({ m }) {
       return;
     }
     let active = true;
+    setUrl('');
     (async () => {
       try {
         const blob = await descargarArchivoPdfBlob(sel[0]);
         if (!active) return;
         setUrl(URL.createObjectURL(blob));
-      } catch {
-        // Silenciar error en caso de fallo de red al pedir vista previa
+      } catch (ex) {
+        if (active) toast(ex?.message || 'No se pudo cargar la vista previa del PDF', 'err');
       }
     })();
     return () => {
@@ -183,6 +203,21 @@ export default function ModulePage({ m }) {
         return toast(res?.message || 'Documento registrado correctamente');
       } catch (ex) {
         return toast(ex?.message || 'Error al registrar documento', 'err');
+      }
+    }
+
+    if (m.path === '/workflow' && getToken()) {
+      try {
+        const res = await crearTramite(v);
+        if (res?.data) {
+          const fila = mapTramiteDto(res.data);
+          setRows(r => [fila, ...r]);
+          setLog(l => [entradaLog(fila, `Trámite registrado (${fila.folio_pase_salida})`), ...l]);
+        }
+        reset();
+        return toast(res?.message || 'Trámite registrado correctamente');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al registrar trámite', 'err');
       }
     }
 
@@ -271,11 +306,59 @@ export default function ModulePage({ m }) {
         });
       }
 
+      if (b.a === 'reload' && m.path === '/workflow' && getToken()) {
+        (async () => {
+          try {
+            const tramites = await listarTramites();
+            setRows(tramites);
+            setSel(s => s.filter(id => tramites.some(t => t.id === id)));
+            toast('Lista de trámites actualizada');
+          } catch (ex) {
+            toast(ex?.message || 'Error al actualizar trámites', 'err');
+          }
+        })();
+        return;
+      }
+
       if (b.a === 'status') {
         if (!needSel()) return;
         if (b.s === 'Aprobado' && !String(v.firma || '').trim()) {
           return toast('Ingresa la firma electrónica / token para aprobar', 'err');
         }
+        if (b.s === 'Rechazado' && !String(v.motivo || '').trim()) {
+          return toast('Escribe las observaciones/correcciones para rechazar', 'err');
+        }
+
+        if (m.path === '/workflow' && getToken()) {
+          (async () => {
+            const ids = [...sel];
+            const { actualizados, errores } = await cambiarEstadoVarios(ids, {
+              estado: b.s,
+              observaciones: v.motivo,
+              firma: v.firma
+            });
+            if (actualizados.length) {
+              const porId = Object.fromEntries(actualizados.map(t => [t.id, t]));
+              setRows(r => r.map(x => porId[x.id] || x));
+              setLog(l => [
+                ...actualizados.map(t => entradaLog(t, `${b.l} (${t.folio_pase_salida})`)),
+                ...l
+              ]);
+              setSel([]);
+              setV(s => ({ ...s, firma: '', motivo: '' }));
+            }
+            if (errores.length) {
+              const ok = actualizados.length;
+              return toast(
+                ok ? `Se actualizaron ${ok} de ${ids.length}. ${errores[0]}` : errores[0],
+                'err'
+              );
+            }
+            toast(`${b.l}: ${actualizados.length} trámite(s) actualizado(s)`);
+          })();
+          return;
+        }
+
         setRows(r => r.map(x => (sel.includes(x.id) ? { ...x, estado: b.s } : x)));
         setLog(l => [{ t: b.l, d: now() }, ...l]);
         return toast(b.l + ': registrado');

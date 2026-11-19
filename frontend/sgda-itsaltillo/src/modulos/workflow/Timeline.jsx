@@ -10,13 +10,14 @@ export function Timeline({ log }) {
             <li key={i}>
               <b>{e.t}</b>
               <small>{e.d}</small>
+              {e.detalle && <small>{e.detalle}</small>}
             </li>
           ))}
         </ol>
       ) : (
         <EmptyState
           titulo="Sin movimientos"
-          descripcion="Los movimientos se registrarán al aprobar, rechazar o reenviar trámites."
+          descripcion="Los movimientos se registrarán al crear, aprobar, rechazar o reenviar trámites."
         />
       )}
     </div>

@@ -10,7 +10,9 @@ public class ActualizarDocumentoDto
     [StringLength(50)]
     public string? TipoDocumento { get; set; }
 
-    // TODO: agregar NumeroExpediente cuando exista la entidad Expediente.
+    // Opcional: vacío = desvincular del expediente
+    [StringLength(30)]
+    public string? NumeroExpediente { get; set; }
 
     public DateTime? FechaCreacion { get; set; }
 }

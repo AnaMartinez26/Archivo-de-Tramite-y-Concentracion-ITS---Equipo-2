@@ -12,12 +12,17 @@ export default {
     f('folio', 'Folio', 'text', { req: 1, ph: 'Ingresa el folio' }),
     f('titulo', 'Título del Documento', 'text', { req: 1, ph: 'Ingresa el título' }),
     f('tipo_documento', 'Tipo de Documento', 'text', { ph: 'Ingresa el tipo de documento' }),
+    f('numero_expediente', 'Número de Expediente', 'text', {
+      ph: 'Opcional: expediente al que pertenece'
+    }),
     f('fecha_creacion', 'Fecha de Creación', 'date')
   ],
+  search: 'Buscar por folio, título, tipo o expediente...',
   cols: [
     c('folio', 'Folio'),
     c('titulo', 'Título'),
     c('tipo_documento', 'Tipo'),
+    c('numero_expediente', 'Expediente'),
     c('ruta_archivo', 'Ruta del Archivo'),
     c('formato', 'Formato'),
     c('fecha_digitalizacion', 'Fecha de Digitalización')

@@ -48,7 +48,9 @@ public class UsuarioService : IUsuarioService
             Correo = correo,
             Pass = PasswordHasher.Hash(dto.Password),
             IdRol = dto.IdRol,
-            Estado = dto.Estado
+            Estado = dto.Estado,
+            Departamento = string.IsNullOrWhiteSpace(dto.Departamento) ? null : dto.Departamento.Trim(),
+            Puesto = string.IsNullOrWhiteSpace(dto.Puesto) ? null : dto.Puesto.Trim()
         };
 
         try
@@ -56,7 +58,7 @@ public class UsuarioService : IUsuarioService
             await _usuarios.AgregarAsync(usuario);
             await _usuarios.GuardarCambiosAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (SqlExceptionHelper.EsClaveDuplicada(ex))
         {
             // Por si dos peticiones registran el mismo correo/número al mismo tiempo (UNIQUE)
             return ServiceResult<UsuarioDto>.Error(
@@ -66,6 +68,29 @@ public class UsuarioService : IUsuarioService
         // Recargar con el rol incluido para regresarlo completo
         var creado = await _usuarios.ObtenerPorIdAsync(usuario.Id);
         return ServiceResult<UsuarioDto>.Ok(creado!.ToDto(), "Usuario registrado correctamente.", 201);
+    }
+
+    public async Task<ServiceResult<UsuarioDto>> CambiarEstadoAsync(int id, CambiarEstadoUsuarioDto dto, int idUsuarioActual = 0)
+    {
+        var usuario = await _usuarios.ObtenerPorIdAsync(id);
+        if (usuario is null)
+            return ServiceResult<UsuarioDto>.Error("Usuario no encontrado.", 404);
+
+        var nuevoEstado = dto.Estado.Trim();
+        if (nuevoEstado is not ("Activo" or "Inactivo"))
+            return ServiceResult<UsuarioDto>.Error("El estado debe ser 'Activo' o 'Inactivo'.", 400);
+
+        if (idUsuarioActual > 0 && usuario.Id == idUsuarioActual && nuevoEstado == "Inactivo")
+            return ServiceResult<UsuarioDto>.Error("No puedes desactivar tu propio usuario.", 400);
+
+        if (usuario.Estado == nuevoEstado)
+            return ServiceResult<UsuarioDto>.Error("El usuario ya se encuentra en ese estado.", 400);
+
+        usuario.Estado = nuevoEstado;
+        await _usuarios.GuardarCambiosAsync();
+
+        var accion = nuevoEstado == "Activo" ? "activado" : "desactivado";
+        return ServiceResult<UsuarioDto>.Ok(usuario.ToDto(), $"Usuario {accion} correctamente.");
     }
 
     public Task<List<Rol>> ObtenerRolesAsync() => _usuarios.ObtenerRolesAsync();

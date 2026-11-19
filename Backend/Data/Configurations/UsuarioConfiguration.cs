@@ -21,6 +21,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         e.Property(u => u.Pass).HasMaxLength(255).IsRequired();
         e.Property(u => u.IdRol).HasColumnName("id_rol");
         e.Property(u => u.Estado).HasMaxLength(10).IsRequired();
+        e.Property(u => u.Departamento).HasColumnName("departamento").HasMaxLength(100);
+        e.Property(u => u.Puesto).HasColumnName("puesto").HasMaxLength(100);
         e.Property(u => u.UltimoLogin).HasColumnName("ultimo_login");
         e.Property(u => u.FechaCreacion).HasColumnName("fecha_creacion")
                                         .HasDefaultValueSql("SYSDATETIME()");

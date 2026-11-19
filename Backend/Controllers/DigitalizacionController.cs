@@ -13,6 +13,8 @@ namespace Backend.Controllers;
 public class DigitalizacionController : ControllerBase
 {
     private readonly IDocumentoService _docs;
+    private const string RolesLecturaYRegistro = "Administrador,Encargada de Archivo,Trabajador RRHH";
+    private const string RolesGestion = "Administrador,Encargada de Archivo";
     public DigitalizacionController(IDocumentoService docs) => _docs = docs;
 
     // Id del usuario autenticado (0 si el token no trae el claim)
@@ -38,6 +40,7 @@ public class DigitalizacionController : ControllerBase
 
     // POST api/digitalizacion
     [HttpPost]
+    [Authorize(Roles = RolesLecturaYRegistro)]
     public async Task<IActionResult> Crear([FromBody] CrearDocumentoDto dto)
     {
         if (UsuarioId == 0) return Unauthorized(ApiResponse<object>.Fail("Token inválido."));
@@ -48,6 +51,7 @@ public class DigitalizacionController : ControllerBase
 
     // PUT api/digitalizacion/5
     [HttpPut("{id:int}")]
+    [Authorize(Roles = RolesGestion)]
     public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarDocumentoDto dto)
     {
         var r = await _docs.ActualizarAsync(id, dto);
@@ -58,6 +62,7 @@ public class DigitalizacionController : ControllerBase
     // POST api/digitalizacion/5/archivo  (multipart/form-data)
     [HttpPost("{id:int}/archivo")]
     [RequestSizeLimit(20 * 1024 * 1024)]   // 20 MB
+    [Authorize(Roles = RolesLecturaYRegistro)]
     public async Task<IActionResult> SubirArchivo(int id, IFormFile archivo)
     {
         if (UsuarioId == 0) return Unauthorized(ApiResponse<object>.Fail("Token inválido."));
@@ -83,7 +88,7 @@ public class DigitalizacionController : ControllerBase
 
     // DELETE api/digitalizacion/5
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador,Encargada de Archivo")]
+    [Authorize(Roles = RolesGestion)]
     public async Task<IActionResult> Eliminar(int id)
     {
         var r = await _docs.EliminarAsync(id);

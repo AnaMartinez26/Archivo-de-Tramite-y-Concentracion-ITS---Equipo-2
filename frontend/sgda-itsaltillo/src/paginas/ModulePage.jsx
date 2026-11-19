@@ -10,7 +10,11 @@ import {
 } from '../componentes/ui/index.js';
 import { PageTitle } from '../componentes/layout/Layout.jsx';
 import { getToken } from '../api/sesion.js';
-import { cargarUsuariosYRoles, crearUsuario } from '../modulos/usuarios/usuarios.service.js';
+import {
+  cargarUsuariosYRoles,
+  crearUsuario,
+  cambiarEstadoUsuario
+} from '../modulos/usuarios/usuarios.service.js';
 import {
   mapDocumentoDto,
   listarDocumentos,
@@ -19,6 +23,14 @@ import {
   descargarArchivoPdfBlob,
   eliminarDocumentos
 } from '../modulos/digitalizacion/digitalizacion.service.js';
+import {
+  mapTramiteDto,
+  entradaLog,
+  construirLogInicial,
+  listarTramites,
+  crearTramite,
+  cambiarEstadoVarios
+} from '../modulos/workflow/workflow.service.js';
 import { TreeView } from '../modulos/clasificacion/TreeView.jsx';
 import { Marbete } from '../modulos/etiquetado/Marbete.jsx';
 import { FileUpload } from '../modulos/digitalizacion/FileUpload.jsx';
@@ -73,6 +85,17 @@ export default function ModulePage({ m }) {
           if (active) toast(ex?.message || 'Error al cargar documentos', 'err');
         }
       })();
+    } else if (m.path === '/workflow') {
+      (async () => {
+        try {
+          const tramites = await listarTramites();
+          if (!active) return;
+          setRows(tramites);
+          setLog(construirLogInicial(tramites));
+        } catch (ex) {
+          if (active) toast(ex?.message || 'Error al cargar trámites', 'err');
+        }
+      })();
     }
 
     return () => {
@@ -94,13 +117,14 @@ export default function ModulePage({ m }) {
       return;
     }
     let active = true;
+    setUrl('');
     (async () => {
       try {
         const blob = await descargarArchivoPdfBlob(sel[0]);
         if (!active) return;
         setUrl(URL.createObjectURL(blob));
-      } catch {
-        // Silenciar error en caso de fallo de red al pedir vista previa
+      } catch (ex) {
+        if (active) toast(ex?.message || 'No se pudo cargar la vista previa del PDF', 'err');
       }
     })();
     return () => {
@@ -139,7 +163,7 @@ export default function ModulePage({ m }) {
 
     if (m.path === '/usuarios' && getToken()) {
       try {
-        const { fila, message } = await crearUsuario(v, rows.length, rolesMap);
+        const { fila, message } = await crearUsuario(v, rolesMap);
         if (fila) setRows(r => [...r, fila]);
         reset();
         return toast(message);
@@ -183,6 +207,21 @@ export default function ModulePage({ m }) {
         return toast(res?.message || 'Documento registrado correctamente');
       } catch (ex) {
         return toast(ex?.message || 'Error al registrar documento', 'err');
+      }
+    }
+
+    if (m.path === '/workflow' && getToken()) {
+      try {
+        const res = await crearTramite(v);
+        if (res?.data) {
+          const fila = mapTramiteDto(res.data);
+          setRows(r => [fila, ...r]);
+          setLog(l => [entradaLog(fila, `Trámite registrado (${fila.folio_pase_salida})`), ...l]);
+        }
+        reset();
+        return toast(res?.message || 'Trámite registrado correctamente');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al registrar trámite', 'err');
       }
     }
 
@@ -271,11 +310,59 @@ export default function ModulePage({ m }) {
         });
       }
 
+      if (b.a === 'reload' && m.path === '/workflow' && getToken()) {
+        (async () => {
+          try {
+            const tramites = await listarTramites();
+            setRows(tramites);
+            setSel(s => s.filter(id => tramites.some(t => t.id === id)));
+            toast('Lista de trámites actualizada');
+          } catch (ex) {
+            toast(ex?.message || 'Error al actualizar trámites', 'err');
+          }
+        })();
+        return;
+      }
+
       if (b.a === 'status') {
         if (!needSel()) return;
         if (b.s === 'Aprobado' && !String(v.firma || '').trim()) {
           return toast('Ingresa la firma electrónica / token para aprobar', 'err');
         }
+        if (b.s === 'Rechazado' && !String(v.motivo || '').trim()) {
+          return toast('Escribe las observaciones/correcciones para rechazar', 'err');
+        }
+
+        if (m.path === '/workflow' && getToken()) {
+          (async () => {
+            const ids = [...sel];
+            const { actualizados, errores } = await cambiarEstadoVarios(ids, {
+              estado: b.s,
+              observaciones: v.motivo,
+              firma: v.firma
+            });
+            if (actualizados.length) {
+              const porId = Object.fromEntries(actualizados.map(t => [t.id, t]));
+              setRows(r => r.map(x => porId[x.id] || x));
+              setLog(l => [
+                ...actualizados.map(t => entradaLog(t, `${b.l} (${t.folio_pase_salida})`)),
+                ...l
+              ]);
+              setSel([]);
+              setV(s => ({ ...s, firma: '', motivo: '' }));
+            }
+            if (errores.length) {
+              const ok = actualizados.length;
+              return toast(
+                ok ? `Se actualizaron ${ok} de ${ids.length}. ${errores[0]}` : errores[0],
+                'err'
+              );
+            }
+            toast(`${b.l}: ${actualizados.length} trámite(s) actualizado(s)`);
+          })();
+          return;
+        }
+
         setRows(r => r.map(x => (sel.includes(x.id) ? { ...x, estado: b.s } : x)));
         setLog(l => [{ t: b.l, d: now() }, ...l]);
         return toast(b.l + ': registrado');
@@ -288,21 +375,32 @@ export default function ModulePage({ m }) {
     b.c ? setCf({ msg: `¿Confirmas la acción "${b.l}"?`, ok: go }) : go();
   };
 
-  const act = (a, r) =>
+  const act = (a, r) => {
+    const accion = typeof a === 'string' ? a : a?.label || '';
+    const esCambioEstadoUsuario =
+      m.path === '/usuarios' && (accion === 'Desactivar' || accion === 'Activar');
+
+    if (!esCambioEstadoUsuario) {
+      return toast(`${accion}: se ejecutará al conectar el backend`, 'info');
+    }
+
     setCf({
-      msg: `¿Confirmas "${a}"?`,
-      ok: () => {
-        const st = a.startsWith('Desactivar')
-          ? 'Inactivo'
-          : a.includes('Devolución')
-            ? 'Devuelto'
-            : a.includes('Plazo')
-              ? 'En Prórroga'
-              : null;
-        if (st) setRows(x => x.map(y => (y.id === r.id ? { ...y, estado: st } : y)));
-        toast(a + ': hecho', 'info');
+      msg: `¿Confirmas ${accion.toLowerCase()} al usuario "${r.nombre}"?`,
+      ok: async () => {
+        if (!getToken()) return;
+        const nuevoEstado = accion === 'Desactivar' ? 'Inactivo' : 'Activo';
+        try {
+          const { fila, message } = await cambiarEstadoUsuario(r.id, nuevoEstado);
+          setRows(x =>
+            x.map(y => (y.id === r.id ? fila || { ...y, estado: nuevoEstado } : y))
+          );
+          toast(message);
+        } catch (ex) {
+          toast(ex?.message || 'Error al cambiar el estado del usuario', 'err');
+        }
       }
     });
+  };
 
   const fil = rows.filter(
     r =>

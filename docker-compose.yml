@@ -4,6 +4,7 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+      TZ: "America/Monterrey"
     ports:
       - "1433:1433"
     volumes:
@@ -32,6 +33,7 @@ services:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      TZ: "America/Monterrey"
       ConnectionStrings__SatcDb: "Server=db,1433;Database=SATC-ITS;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
       Jwt__Key: ${JWT_KEY}
       SeedAdmin__Password: ${ADMIN_PASSWORD}

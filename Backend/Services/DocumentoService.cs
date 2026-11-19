@@ -36,21 +36,35 @@ public class DocumentoService : IDocumentoService
         if (await _docs.ExisteFolioAsync(folio))
             return ServiceResult<DocumentoDto>.Error("Ya existe un documento con ese folio.", 409);
 
+        var numeroExp = Limpiar(dto.NumeroExpediente);
+        Expediente? expExistente = numeroExp is not null ? await _docs.ObtenerExpedientePorNumeroAsync(numeroExp) : null;
+
         var doc = new Documento
         {
             Folio = folio,
             Titulo = dto.Titulo.Trim(),
-            TipoDocumento = dto.TipoDocumento?.Trim(),
+            TipoDocumento = Limpiar(dto.TipoDocumento),
             FechaCreacion = dto.FechaCreacion,
-            IdUsuarioDigitalizo = idUsuario
+            IdUsuarioDigitalizo = idUsuario,
+            IdExpediente = expExistente?.Id,
+            Expediente = numeroExp is not null && expExistente is null
+                ? new Expediente
+                {
+                    NumeroExpediente = numeroExp,
+                    Titulo = $"Expediente {numeroExp}",
+                    FechaApertura = DateTime.Today,
+                    Estado = "Activo"
+                }
+                : null
         };
 
         await _docs.AgregarAsync(doc);
+
         try
         {
             await _docs.GuardarCambiosAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (SqlExceptionHelper.EsClaveDuplicada(ex))
         {
             // Carrera entre ExisteFolioAsync y el INSERT: el índice único lo detiene
             return ServiceResult<DocumentoDto>.Error("Ya existe un documento con ese folio.", 409);
@@ -66,12 +80,16 @@ public class DocumentoService : IDocumentoService
         if (doc is null)
             return ServiceResult<DocumentoDto>.Error("Documento no encontrado.", 404);
 
+        var idExpediente = await ResolverExpedienteAsync(dto.NumeroExpediente, dto.Titulo);
+
         doc.Titulo = dto.Titulo.Trim();
-        doc.TipoDocumento = dto.TipoDocumento?.Trim();
+        doc.TipoDocumento = Limpiar(dto.TipoDocumento);
+        doc.IdExpediente = idExpediente;
         doc.FechaCreacion = dto.FechaCreacion;
 
         await _docs.GuardarCambiosAsync();
-        return ServiceResult<DocumentoDto>.Ok(ToDto(doc));
+        var actualizado = await _docs.ObtenerPorIdAsync(id);
+        return ServiceResult<DocumentoDto>.Ok(ToDto(actualizado!), "Documento actualizado.");
     }
 
     public async Task<ServiceResult<DocumentoDto>> SubirArchivoAsync(
@@ -151,6 +169,24 @@ public class DocumentoService : IDocumentoService
         return ServiceResult<bool>.Ok(true, "Documento eliminado.");
     }
 
+    // Número de expediente (opcional) -> IdExpediente. Vacío = sin expediente.
+    // Si aún no existe en dbo.expedientes, se crea automáticamente.
+    private async Task<int?> ResolverExpedienteAsync(string? numeroExpediente, string? titulo = null)
+    {
+        var numero = Limpiar(numeroExpediente);
+        if (numero is null) return null;
+
+        var exp = await _docs.ObtenerExpedientePorNumeroAsync(numero)
+                  ?? await _docs.CrearExpedienteAsync(
+                      numero,
+                      Limpiar(titulo) ?? $"Expediente {numero}");
+
+        return exp.Id;
+    }
+
+    private static string? Limpiar(string? texto) =>
+        string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+
     // Mapeo manual (mismo estilo que MappingProfile.cs)
     private static DocumentoDto ToDto(Documento d) => new()
     {
@@ -159,6 +195,7 @@ public class DocumentoService : IDocumentoService
         Titulo = d.Titulo,
         TipoDocumento = d.TipoDocumento,
         IdExpediente = d.IdExpediente,
+        NumeroExpediente = d.Expediente?.NumeroExpediente,
         RutaArchivo = d.RutaArchivo,
         Formato = d.Formato,
         FechaCreacion = d.FechaCreacion,

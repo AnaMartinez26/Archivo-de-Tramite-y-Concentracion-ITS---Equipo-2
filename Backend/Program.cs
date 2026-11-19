@@ -1,5 +1,6 @@
 using Backend.Data.Seed;
 using Backend.Extensions;
+using Backend.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,8 @@ else
 }
 
 app.UseCors("Frontend");
+app.UseMiddleware<ExceptionMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

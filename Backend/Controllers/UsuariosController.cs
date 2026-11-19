@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Backend.Models.DTOs.Common;
 using Backend.Models.DTOs.Usuarios;
 using Backend.Services.Interfaces;
@@ -14,6 +15,10 @@ public class UsuariosController : ControllerBase
     private readonly IUsuarioService _usuarios;
 
     public UsuariosController(IUsuarioService usuarios) => _usuarios = usuarios;
+
+    // Id del usuario autenticado (0 si el token no trae el claim)
+    private int UsuarioId =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
     // GET api/usuarios
     [HttpGet]
@@ -50,5 +55,14 @@ public class UsuariosController : ControllerBase
                     .Select(r => new { r.Id, r.Nombre })
                     .ToList();
         return Ok(ApiResponse<object>.Ok(roles));
+    }
+
+    // PATCH api/usuarios/5/estado  -> activar o desactivar usuario
+    [HttpPatch("{id:int}/estado")]
+    public async Task<IActionResult> CambioEstado(int id, [FromBody] CambiarEstadoUsuarioDto dto)
+    {
+        var r = await _usuarios.CambiarEstadoAsync(id, dto, UsuarioId);
+        return r.Exito ? Ok(ApiResponse<UsuarioDto>.Ok(r.Data!, r.Mensaje))
+                       : StatusCode(r.StatusCode, ApiResponse<UsuarioDto>.Fail(r.Mensaje));
     }
 }

@@ -22,7 +22,6 @@ public static class DbSeeder
 
         try
         {
-            await db.Database.EnsureCreatedAsync();
 
             // 1. Roles
             var existentes = await db.Roles.Select(r => r.Nombre).ToListAsync();

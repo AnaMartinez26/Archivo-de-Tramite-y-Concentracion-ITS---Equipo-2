@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Rol> Roles { get; set; }
     public DbSet<Documento> Documentos { get; set; }
+    public DbSet<Expediente> Expedientes { get; set; }
+    public DbSet<Tramite> Tramites { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -17,7 +17,7 @@ public class DocumentoConfiguration : IEntityTypeConfiguration<Documento>
         e.Property(d => d.IdExpediente).HasColumnName("id_expediente");
         e.Property(d => d.RutaArchivo).HasColumnName("ruta_archivo").HasMaxLength(500);
         e.Property(d => d.Formato).HasColumnName("formato").HasMaxLength(10);
-        e.Property(d => d.FechaCreacion).HasColumnName("fecha_creacion");
+        e.Property(d => d.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("date");
         e.Property(d => d.FechaDigitalizacion).HasColumnName("fecha_digitalizacion")
                                               .HasDefaultValueSql("SYSDATETIME()");
         e.Property(d => d.IdUsuarioDigitalizo).HasColumnName("id_usuario_digitalizo");
@@ -25,5 +25,9 @@ public class DocumentoConfiguration : IEntityTypeConfiguration<Documento>
         e.HasOne(d => d.UsuarioDigitalizo)
          .WithMany()
          .HasForeignKey(d => d.IdUsuarioDigitalizo);
+        e.HasOne(d => d.Expediente)
+         .WithMany()
+         .HasForeignKey(d => d.IdExpediente)
+         .OnDelete(DeleteBehavior.Restrict);
     }
 }

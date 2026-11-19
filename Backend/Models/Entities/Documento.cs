@@ -13,6 +13,7 @@ public class Documento
     public DateTime FechaDigitalizacion { get; set; }
     public int? IdUsuarioDigitalizo { get; set; }
 
-    // Navegación (opcionales por ahora, Expediente aún no tiene entidad)
+    // Navegación
+    public Expediente? Expediente { get; set; }
     public Usuario? UsuarioDigitalizo { get; set; }
 }

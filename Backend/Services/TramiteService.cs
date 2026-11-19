@@ -91,49 +91,55 @@ public class TramiteService : ITramiteService
         return ServiceResult<TramiteDto>.Ok(ToDto(creado!), "Trámite registrado correctamente.", 201);
     }
 
-    public async Task<ServiceResult<TramiteDto>> CambiarEstadoAsync(
-        int id, ActualizarTramiteDto dto, int idUsuarioRevisa)
+    public async Task<ServiceResult<TramiteDto>> CambiarEstadoAsync(int id, ActualizarTramiteDto dto, int idUsuarioRevisa)
     {
         var tramite = await _tramites.ObtenerPorIdAsync(id);
         if (tramite is null)
+        {
             return ServiceResult<TramiteDto>.Error("Trámite no encontrado.", 404);
-
+        }
+        
         var nuevo = dto.Estado.Trim();
         if (!EstadoTramite.EsValido(nuevo))
-            return ServiceResult<TramiteDto>.Error("Estado de trámite no válido.", 400);
+        {
+            return ServiceResult<TramiteDto>.Error("Estado inválido.", 400);
+        }
 
         if (tramite.Estado == nuevo)
-            return ServiceResult<TramiteDto>.Error(
-                $"El trámite {tramite.Folio} ya está en \"{nuevo}\".", 409);
+        {
+            return ServiceResult<TramiteDto>.Error("El trámite ya se encuentra en ese estado.", 400);
+        }
 
         if (!Transiciones.TryGetValue(tramite.Estado, out var destinos) || !destinos.Contains(nuevo))
-            return ServiceResult<TramiteDto>.Error(
-                $"No se puede pasar el trámite {tramite.Folio} de \"{tramite.Estado}\" a \"{nuevo}\".", 409);
+        {
+            return ServiceResult<TramiteDto>.Error($"No se puede pasar el trámite {tramite.Folio} de \"{tramite.Estado}\" a \"{nuevo}\".", 400);
+        }
 
-        if (nuevo == EstadoTramite.Aprobado && string.IsNullOrWhiteSpace(dto.FirmaToken))
-            return ServiceResult<TramiteDto>.Error(
-                "Ingresa la firma electrónica / token para aprobar el trámite.", 400);
-
-        if (nuevo == EstadoTramite.Rechazado && string.IsNullOrWhiteSpace(dto.Observaciones))
+         if (nuevo == EstadoTramite.Rechazado && string.IsNullOrWhiteSpace(dto.Observaciones))
             return ServiceResult<TramiteDto>.Error(
                 "Ingresa las observaciones o correcciones para rechazar el trámite.", 400);
-
+        if (nuevo == EstadoTramite.Aprobado)
+        {
+            if (string.IsNullOrWhiteSpace(dto.FirmaToken))
+                return ServiceResult<TramiteDto>.Error(
+                    "Ingresa la firma electrónica / token para aprobar el trámite.", 400);
+            var revisor = await _usuarios.ObtenerPorIdAsync(idUsuarioRevisa);
+            if (revisor is null || revisor.Estado != "Activo")
+                return ServiceResult<TramiteDto>.Error("El usuario revisor no existe o está inactivo.", 403);
+            // Valida la firma contra la contraseña del usuario que autoriza
+            if (!PasswordHasher.Verify(dto.FirmaToken.Trim(), revisor.Pass))
+                return ServiceResult<TramiteDto>.Error(
+                    "Firma electrónica / token inválido. Verifica tu contraseña de autorización.", 401);
+            tramite.FirmaToken = PasswordHasher.Hash(dto.FirmaToken.Trim());
+        }
         tramite.Estado = nuevo;
         tramite.IdUsuarioRevisa = idUsuarioRevisa;
-
         var obs = Limpiar(dto.Observaciones);
         if (obs is not null) tramite.Observaciones = obs;
-
-        // La firma nunca se guarda en texto plano
-        if (nuevo == EstadoTramite.Aprobado)
-            tramite.FirmaToken = PasswordHasher.Hash(dto.FirmaToken!.Trim());
-
         tramite.FechaResolucion = nuevo is EstadoTramite.Aprobado or EstadoTramite.Rechazado
             ? DateTime.Now
             : null;
-
         await _tramites.GuardarCambiosAsync();
-
         var actualizado = await _tramites.ObtenerPorIdAsync(id);
         return ServiceResult<TramiteDto>.Ok(ToDto(actualizado!), $"Trámite {tramite.Folio}: {nuevo}.");
     }

@@ -22,3 +22,15 @@ Con la implementación de este sistema se busca reducir la dependencia de los pr
 - Project Libre.
 - Visual Paradigm.
 - DBDesigner.
+
+## Ejecución en Desarrollo Local:
+```powershell
+# 1. Crear archivo de configuración local de desarrollo
+Copy-Item Backend/appsettings.Development.example.json Backend/appsettings.Development.json
+
+# 2. Inicializar la base de datos en LocalDB con el esquema completo
+sqlcmd -S "(localdb)\MSSQLLocalDB" -i BD\init.sql
+
+# 3. Levantar el backend
+dotnet run --project Backend
+```

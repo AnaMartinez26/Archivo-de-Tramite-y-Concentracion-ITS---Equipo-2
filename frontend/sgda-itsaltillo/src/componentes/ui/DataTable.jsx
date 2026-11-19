@@ -75,10 +75,15 @@ export function DataTable({ caption, cols, rows, acts, select, sel, setSel, onAc
                 {acts && (
                   <td>
                     <div className="row">
-                      {acts.map(a => {
-                        const etiqueta = typeof a === 'string' ? a : a.label;
+                      {acts.map((a, idx) => {
+                        const resuelta = typeof a === 'function' ? a(fila) : a;
+                        if (!resuelta) return null;
+                        const etiqueta = typeof resuelta === 'string' ? resuelta : resuelta.label;
                         return (
-                          <Button key={etiqueta} onClick={() => onAct(a, fila)}>
+                          <Button
+                            key={resuelta.key || etiqueta || idx}
+                            onClick={() => onAct(resuelta, fila)}
+                          >
                             {etiqueta}
                           </Button>
                         );

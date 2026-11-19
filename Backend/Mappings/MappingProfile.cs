@@ -18,6 +18,8 @@ public static class MappingProfile
         IdRol = u.IdRol,
         Rol = u.Rol?.Nombre ?? string.Empty,
         Estado = u.Estado,
+        Departamento = u.Departamento,
+        Puesto = u.Puesto,
         UltimoLogin = u.UltimoLogin,
         FechaCreacion = u.FechaCreacion
     };

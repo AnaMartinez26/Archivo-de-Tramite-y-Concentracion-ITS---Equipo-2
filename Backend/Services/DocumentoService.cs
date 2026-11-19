@@ -36,24 +36,35 @@ public class DocumentoService : IDocumentoService
         if (await _docs.ExisteFolioAsync(folio))
             return ServiceResult<DocumentoDto>.Error("Ya existe un documento con ese folio.", 409);
 
-        var idExpediente = await ResolverExpedienteAsync(dto.NumeroExpediente, dto.Titulo);
+        var numeroExp = Limpiar(dto.NumeroExpediente);
+        Expediente? expExistente = numeroExp is not null ? await _docs.ObtenerExpedientePorNumeroAsync(numeroExp) : null;
 
         var doc = new Documento
         {
             Folio = folio,
             Titulo = dto.Titulo.Trim(),
             TipoDocumento = Limpiar(dto.TipoDocumento),
-            IdExpediente = idExpediente,
             FechaCreacion = dto.FechaCreacion,
-            IdUsuarioDigitalizo = idUsuario
+            IdUsuarioDigitalizo = idUsuario,
+            IdExpediente = expExistente?.Id,
+            Expediente = numeroExp is not null && expExistente is null
+                ? new Expediente
+                {
+                    NumeroExpediente = numeroExp,
+                    Titulo = $"Expediente {numeroExp}",
+                    FechaApertura = DateTime.Today,
+                    Estado = "Activo"
+                }
+                : null
         };
 
         await _docs.AgregarAsync(doc);
+
         try
         {
             await _docs.GuardarCambiosAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (SqlExceptionHelper.EsClaveDuplicada(ex))
         {
             // Carrera entre ExisteFolioAsync y el INSERT: el índice único lo detiene
             return ServiceResult<DocumentoDto>.Error("Ya existe un documento con ese folio.", 409);

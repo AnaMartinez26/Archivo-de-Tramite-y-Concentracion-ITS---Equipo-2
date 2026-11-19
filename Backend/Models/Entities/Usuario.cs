@@ -11,6 +11,8 @@ public class Usuario
     public string Pass { get; set; } = null!;   // hash BCrypt, nunca la contraseña en texto plano
     public int IdRol { get; set; }
     public string Estado { get; set; } = "Activo";
+    public string? Departamento { get; set; }
+    public string? Puesto { get; set; }
     public DateTime? UltimoLogin { get; set; }
     public DateTime FechaCreacion { get; set; }
 

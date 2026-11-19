@@ -13,6 +13,8 @@ public class UsuarioDto
     public int IdRol { get; set; }
     public string Rol { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
+    public string? Departamento { get; set; }
+    public string? Puesto { get; set; }
     public DateTime? UltimoLogin { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

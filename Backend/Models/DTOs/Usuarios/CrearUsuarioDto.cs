@@ -28,4 +28,10 @@ public class CrearUsuarioDto
 
     [RegularExpression("^(Activo|Inactivo)$", ErrorMessage = "El estado debe ser 'Activo' o 'Inactivo'.")]
     public string Estado { get; set; } = "Activo";
+
+    [StringLength(100)]
+    public string? Departamento { get; set; }
+
+    [StringLength(100)]
+    public string? Puesto { get; set; }
 }

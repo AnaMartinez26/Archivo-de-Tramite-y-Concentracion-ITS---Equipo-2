@@ -1,6 +1,7 @@
 using System.Text;
 using Backend.Data;
 using Backend.Helpers;
+using Backend.Models.DTOs.Common;
 using Backend.Repositories;
 using Backend.Repositories.Interfaces;
 using Backend.Services;
@@ -38,8 +39,9 @@ public static class ServiceCollectionExtensions
     // Autenticación con JWT
     public static IServiceCollection AddAutenticacionJwt(this IServiceCollection services, IConfiguration config)
     {
-        var key = config["Jwt:Key"]
-                  ?? throw new InvalidOperationException("Falta 'Jwt:Key' en appsettings.");
+        var key = config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(key) || Encoding.UTF8.GetByteCount(key) < 32)
+            throw new InvalidOperationException("Falta 'Jwt:Key' en appsettings o tiene menos de 32 bytes.");
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -54,6 +56,25 @@ public static class ServiceCollectionExtensions
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromMinutes(1)
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = async ctx =>
+                    {
+                        ctx.HandleResponse();
+                        ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        await ctx.Response.WriteAsJsonAsync(
+                            ApiResponse<object>.Fail("Tu sesión expiró o no has iniciado sesión."));
+                    },
+                    OnForbidden = async ctx =>
+                    {
+                        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        await ctx.Response.WriteAsJsonAsync(
+                            ApiResponse<object>.Fail("No tienes permisos suficientes para realizar esta acción."));
+                    }
                 };
             });
 

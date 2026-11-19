@@ -10,7 +10,11 @@ import {
 } from '../componentes/ui/index.js';
 import { PageTitle } from '../componentes/layout/Layout.jsx';
 import { getToken } from '../api/sesion.js';
-import { cargarUsuariosYRoles, crearUsuario } from '../modulos/usuarios/usuarios.service.js';
+import {
+  cargarUsuariosYRoles,
+  crearUsuario,
+  cambiarEstadoUsuario
+} from '../modulos/usuarios/usuarios.service.js';
 import {
   mapDocumentoDto,
   listarDocumentos,
@@ -159,7 +163,7 @@ export default function ModulePage({ m }) {
 
     if (m.path === '/usuarios' && getToken()) {
       try {
-        const { fila, message } = await crearUsuario(v, rows.length, rolesMap);
+        const { fila, message } = await crearUsuario(v, rolesMap);
         if (fila) setRows(r => [...r, fila]);
         reset();
         return toast(message);
@@ -371,21 +375,32 @@ export default function ModulePage({ m }) {
     b.c ? setCf({ msg: `¿Confirmas la acción "${b.l}"?`, ok: go }) : go();
   };
 
-  const act = (a, r) =>
+  const act = (a, r) => {
+    const accion = typeof a === 'string' ? a : a?.label || '';
+    const esCambioEstadoUsuario =
+      m.path === '/usuarios' && (accion === 'Desactivar' || accion === 'Activar');
+
+    if (!esCambioEstadoUsuario) {
+      return toast(`${accion}: se ejecutará al conectar el backend`, 'info');
+    }
+
     setCf({
-      msg: `¿Confirmas "${a}"?`,
-      ok: () => {
-        const st = a.startsWith('Desactivar')
-          ? 'Inactivo'
-          : a.includes('Devolución')
-            ? 'Devuelto'
-            : a.includes('Plazo')
-              ? 'En Prórroga'
-              : null;
-        if (st) setRows(x => x.map(y => (y.id === r.id ? { ...y, estado: st } : y)));
-        toast(a + ': hecho', 'info');
+      msg: `¿Confirmas ${accion.toLowerCase()} al usuario "${r.nombre}"?`,
+      ok: async () => {
+        if (!getToken()) return;
+        const nuevoEstado = accion === 'Desactivar' ? 'Inactivo' : 'Activo';
+        try {
+          const { fila, message } = await cambiarEstadoUsuario(r.id, nuevoEstado);
+          setRows(x =>
+            x.map(y => (y.id === r.id ? fila || { ...y, estado: nuevoEstado } : y))
+          );
+          toast(message);
+        } catch (ex) {
+          toast(ex?.message || 'Error al cambiar el estado del usuario', 'err');
+        }
       }
     });
+  };
 
   const fil = rows.filter(
     r =>

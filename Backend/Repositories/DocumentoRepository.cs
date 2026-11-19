@@ -1,4 +1,5 @@
 using Backend.Data;
+using Backend.Helpers;
 using Backend.Models.Entities;
 using Backend.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -49,7 +50,7 @@ public class DocumentoRepository : IDocumentoRepository
             await _db.SaveChangesAsync();
             return expediente;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (SqlExceptionHelper.EsClaveDuplicada(ex))
         {
             _db.Entry(expediente).State = EntityState.Detached;
             return (await ObtenerExpedientePorNumeroAsync(numeroExpediente))!;

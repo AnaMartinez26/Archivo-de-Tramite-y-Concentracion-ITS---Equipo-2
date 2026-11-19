@@ -61,15 +61,21 @@ public class TramiteService : ITramiteService
             return ServiceResult<TramiteDto>.Error("El solicitante está inactivo.", 400);
 
         var numeroExpediente = dto.NumeroExpediente.Trim();
-        var expediente = await _tramites.ObtenerExpedientePorNumeroAsync(numeroExpediente)
-                         ?? await _tramites.CrearExpedienteAsync(
-                             numeroExpediente,
-                             Limpiar(dto.Solicitud) ?? $"Expediente {numeroExpediente}");
+        var expExistente = await _tramites.ObtenerExpedientePorNumeroAsync(numeroExpediente);
 
         var tramite = new Tramite
         {
             Folio = folio,
-            IdExpediente = expediente.Id,
+            IdExpediente = expExistente?.Id ?? 0,
+            Expediente = expExistente is null
+                ? new Expediente
+                {
+                    NumeroExpediente = numeroExpediente,
+                    Titulo = $"Expediente {numeroExpediente}",
+                    FechaApertura = DateTime.Today,
+                    Estado = "Activo"
+                }
+                : null!,
             IdSolicitante = solicitante.Id,
             Solicitud = Limpiar(dto.Solicitud),
             Estado = estado,
@@ -82,7 +88,7 @@ public class TramiteService : ITramiteService
         {
             await _tramites.GuardarCambiosAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (SqlExceptionHelper.EsClaveDuplicada(ex))
         {
             return ServiceResult<TramiteDto>.Error("Ya existe un trámite con ese folio.", 409);
         }

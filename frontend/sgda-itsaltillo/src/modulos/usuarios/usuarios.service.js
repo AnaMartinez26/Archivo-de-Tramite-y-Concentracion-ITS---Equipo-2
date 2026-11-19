@@ -1,5 +1,4 @@
 import { apiFetch } from '../../api/cliente.js';
-import { ROLES } from '../helpers.js';
 
 export const mapUsuarioDto = u => ({
   id: u.id,
@@ -27,36 +26,51 @@ export async function cargarUsuariosYRoles() {
   return { rows, rolesMap };
 }
 
-export async function crearUsuario(valores, totalFilas, rolesMap = {}) {
-  const partes = String(valores.nombre || '')
-    .trim()
-    .split(/\s+/);
-  const nombre = partes[0] || '';
-  const apellidoP = partes[1] || partes[0] || '—';
-  const apellidoM = partes.slice(2).join(' ') || '—';
-  const numEmpleado = parseInt(valores.numero_empleado, 10) || totalFilas + 1000;
-  const idRol = rolesMap[valores.rol] || ROLES.indexOf(valores.rol) + 1 || 1;
+export async function crearUsuario(valores, rolesMap = {}) {
+  const numEmpleado = Number(String(valores.numero_empleado || '').trim());
+  if (!Number.isInteger(numEmpleado) || numEmpleado <= 0) {
+    throw new Error('Ingresa un número de empleado entero mayor a 0.');
+  }
+
+  const idRol = rolesMap[valores.rol];
+  if (!idRol) {
+    throw new Error('No se pudo resolver el rol seleccionado. Recarga la página e intenta de nuevo.');
+  }
 
   const res = await apiFetch('/usuarios', {
     method: 'POST',
     body: JSON.stringify({
       numEmpleado,
-      nombre,
-      apellidoP,
-      apellidoM,
+      nombre: String(valores.nombre || '').trim(),
+      apellidoP: String(valores.apellido_p || '').trim(),
+      apellidoM: String(valores.apellido_m || '').trim(),
       correo: String(valores.correo || '').trim(),
       password: String(valores.contrasena || ''),
       idRol,
-      estado: valores.estado || 'Activo'
+      estado: valores.estado || 'Activo',
+      departamento: String(valores.departamento || '').trim() || null,
+      puesto: String(valores.puesto || '').trim() || null
     })
   });
 
-  const fila = res?.data
-    ? {
-        ...mapUsuarioDto(res.data),
-        departamento: valores.departamento || 'Archivo de Concentración'
-      }
-    : null;
+  return {
+    fila: res?.data ? mapUsuarioDto(res.data) : null,
+    message: res?.message || 'Usuario registrado correctamente'
+  };
+}
 
-  return { fila, message: res?.message || 'Usuario registrado correctamente' };
+export async function cambiarEstadoUsuario(id, estado) {
+  const res = await apiFetch(`/usuarios/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado })
+  });
+
+  return {
+    fila: res?.data ? mapUsuarioDto(res.data) : null,
+    message:
+      res?.message ||
+      (estado === 'Activo'
+        ? 'Usuario activado correctamente.'
+        : 'Usuario desactivado correctamente.')
+  };
 }

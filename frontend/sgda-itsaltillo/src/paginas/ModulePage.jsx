@@ -10,6 +10,7 @@ import {
 } from '../componentes/ui/index.js';
 import { PageTitle } from '../componentes/layout/Layout.jsx';
 import { getToken } from '../api/sesion.js';
+import { apiFetch } from '../api/cliente.js';
 import {
   cargarUsuariosYRoles,
   crearUsuario,
@@ -55,6 +56,24 @@ export default function ModulePage({ m }) {
   const [url, setUrl] = useState('');
   const [pendingFile, setPendingFile] = useState(null);
   const [n, setN] = useState(1);
+const [catalogos, setCatalogos] = useState({
+  clasificaciones: [],
+  cajas: [],
+  expedientes: []
+});
+
+const reload = async () => {
+  if (!m.api?.list) return [];
+
+  const res = await apiFetch(m.api.list);
+  const data = Array.isArray(res?.data) ? res.data : [];
+  const mapped = data.map(m.api.toRow || (x => x));
+
+  setRows(mapped);
+  setSel(s => s.filter(id => mapped.some(r => r.id === id)));
+
+  return mapped;
+};
 
   // Carga inicial según el módulo
   useEffect(() => {
@@ -85,7 +104,7 @@ export default function ModulePage({ m }) {
           if (active) toast(ex?.message || 'Error al cargar documentos', 'err');
         }
       })();
-    } else if (m.path === '/workflow') {
+        } else if (m.path === '/workflow') {
       (async () => {
         try {
           const tramites = await listarTramites();
@@ -94,6 +113,43 @@ export default function ModulePage({ m }) {
           setLog(construirLogInicial(tramites));
         } catch (ex) {
           if (active) toast(ex?.message || 'Error al cargar trámites', 'err');
+        }
+      })();
+    } else if (m.api?.list) {
+      (async () => {
+        try {
+          await reload();
+          if (!active) return;
+
+          if (m.path === '/etiquetado') {
+            const [clasificaciones, cajas] = await Promise.all([
+              apiFetch('/clasificaciones'),
+              apiFetch('/almacenamiento/cajas')
+            ]);
+
+            if (!active) return;
+
+            setCatalogos({
+              clasificaciones: clasificaciones?.data || [],
+              cajas: cajas?.data || [],
+              expedientes: []
+            });
+          }
+
+          if (m.path === '/disposicion') {
+            const expedientes = await apiFetch('/expedientes');
+
+            if (!active) return;
+
+            setCatalogos(s => ({
+              ...s,
+              expedientes: expedientes?.data || []
+            }));
+          }
+        } catch (ex) {
+          if (active) {
+            toast(ex?.message || 'Error al cargar información del módulo', 'err');
+          }
         }
       })();
     }
@@ -225,6 +281,35 @@ export default function ModulePage({ m }) {
       }
     }
 
+        if (m.api?.create && getToken()) {
+      try {
+        const body = m.api.toBody ? m.api.toBody(v) : v;
+
+        const res = await apiFetch(m.api.create, {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+
+        if (res?.data) {
+          const fila = m.api.toRow
+            ? m.api.toRow(res.data)
+            : res.data;
+
+          setRows(r => [fila, ...r]);
+
+          // Permite generar la etiqueta del expediente recién creado.
+          if (m.path === '/etiquetado') {
+            setSel([res.data.id]);
+          }
+        }
+
+        reset();
+        return toast(res?.message || 'Registro guardado correctamente');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al guardar el registro', 'err');
+      }
+    }
+
     setRows(r => [
       ...r,
       {
@@ -291,6 +376,25 @@ export default function ModulePage({ m }) {
           msg: '¿Quitar el/los registro(s) seleccionado(s)?',
           ok: async () => {
             if (m.path === '/digitalizacion' && getToken()) {
+                          if (m.path === '/clasificacion' && m.api?.remove && getToken()) {
+              try {
+                for (const id of ids) {
+                  await apiFetch(m.api.remove(id), {
+                    method: 'DELETE'
+                  });
+                }
+
+                await reload();
+                setSel([]);
+                return toast('Clasificación eliminada correctamente');
+              } catch (ex) {
+                return toast(
+                  ex?.message || 'No se pudo eliminar la clasificación',
+                  'err'
+                );
+              }
+            }
+
               const { eliminados, errorMensaje } = await eliminarDocumentos(ids);
               setRows(r => r.filter(x => !eliminados.includes(x.id)));
               setSel(s => s.filter(id => !eliminados.includes(id)));
@@ -368,8 +472,29 @@ export default function ModulePage({ m }) {
         return toast(b.l + ': registrado');
       }
 
+            if (b.a === 'custom') {
+        if (b.need && !needSel()) return;
+
+        if (typeof b.run !== 'function') {
+          return toast('Esta acción no tiene una función configurada', 'err');
+        }
+
+        return b.run({
+          rows,
+          sel,
+          v,
+          setV,
+          setSel,
+          setFl,
+          toast,
+          apiFetch,
+          reload
+        });
+      }
+
       if (b.a === 'need' && !needSel()) return;
-      toast(b.l + ': se ejecutará al conectar el backend', 'info');
+
+      toast(b.l + ': acción todavía no implementada', 'info');
     };
 
     b.c ? setCf({ msg: `¿Confirmas la acción "${b.l}"?`, ok: go }) : go();
@@ -462,19 +587,52 @@ export default function ModulePage({ m }) {
     toast('Réplica digital asociada');
   };
 
-  const form = (
+    const form = (
     <div className="grid2">
-      {m.fields.map(f => (
-        <Field
-          key={f.k}
-          f={f.dyn ? { ...f, options: rows.map(r => r.nombre) } : f}
-          value={v[f.k]}
-          error={err[f.k]}
-          onChange={x => setV(s => ({ ...s, [f.k]: x }))}
-        />
-      ))}
+      {m.fields.map(f => {
+        let options = f.options;
+
+        if (f.dyn) {
+          options = rows.map(r => ({
+            value: r.id,
+            label: r.nombre
+          }));
+        }
+
+        if (f.catalog === 'clasificaciones') {
+          options = catalogos.clasificaciones.map(x => ({
+            value: x.id,
+            label: x.nombre
+          }));
+        }
+
+        if (f.catalog === 'cajas') {
+          options = catalogos.cajas.map(x => ({
+            value: x.cajaNumero,
+            label: `Caja ${x.cajaNumero} — ${x.ubicacionPasilloEstanteBateria}`
+          }));
+        }
+
+        if (f.catalog === 'expedientes') {
+          options = catalogos.expedientes.map(x => ({
+            value: x.id,
+            label: `${x.numeroExpediente} — ${x.titulo}`
+          }));
+        }
+
+        return (
+          <Field
+            key={f.k}
+            f={{ ...f, options }}
+            value={v[f.k]}
+            error={err[f.k]}
+            onChange={x => setV(s => ({ ...s, [f.k]: x }))}
+          />
+        );
+      })}
     </div>
   );
+  
   const inline = m.modal ? null : (
     <div className="card pad">
       <h3>Formulario</h3>

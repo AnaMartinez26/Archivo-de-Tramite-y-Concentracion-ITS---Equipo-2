@@ -1,7 +1,7 @@
+
 import { useId, useState } from 'react';
 import { Button } from './Button.jsx';
 
-// Lista de etiquetas (type: 'tags')
 export function TagInput({ id, value, onChange, placeholder, ph }) {
   const [texto, setTexto] = useState('');
 
@@ -26,9 +26,7 @@ export function TagInput({ id, value, onChange, placeholder, ph }) {
             }
           }}
         />
-        <Button icon="Plus" onClick={agregar}>
-          Agregar
-        </Button>
+        <Button icon="Plus" onClick={agregar}>Agregar</Button>
       </div>
       <div className="chips">
         {value.map(x => (
@@ -48,7 +46,6 @@ export function TagInput({ id, value, onChange, placeholder, ph }) {
   );
 }
 
-// Campo de formulario a partir de la definición creada con campo() / f() en modulos/helpers.js
 export function Field({ field, f, value, onChange, error }) {
   const def = field || f;
   const id = useId();
@@ -58,24 +55,47 @@ export function Field({ field, f, value, onChange, error }) {
   const alCambiar = e => onChange(e.target.value);
 
   let control;
+
   if (def.type === 'select') {
     const textoVacio =
-      def.options?.length === 0 ? 'Sin opciones disponibles' : placeholder || 'Seleccionar';
+      def.options?.length === 0
+        ? 'Sin opciones disponibles'
+        : placeholder || 'Seleccionar';
+
     control = (
       <select id={id} value={valor} onChange={alCambiar}>
         <option value="">{textoVacio}</option>
-        {(def.options || []).map(o => (
-          <option key={o}>{o}</option>
-        ))}
+        {(def.options || []).map(o => {
+          const objeto = typeof o === 'object' && o !== null;
+          const optionValue = objeto ? String(o.value) : String(o);
+          const optionLabel = objeto ? o.label : o;
+
+          return (
+            <option key={optionValue} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
       </select>
     );
   } else if (def.type === 'textarea') {
     control = (
-      <textarea id={id} rows={3} value={valor} placeholder={placeholder} onChange={alCambiar} />
+      <textarea
+        id={id}
+        rows={3}
+        value={valor}
+        placeholder={placeholder}
+        onChange={alCambiar}
+      />
     );
   } else if (def.type === 'tags') {
     control = (
-      <TagInput id={id} value={valor} onChange={onChange} placeholder={placeholder} />
+      <TagInput
+        id={id}
+        value={valor}
+        onChange={onChange}
+        placeholder={placeholder}
+      />
     );
   } else {
     control = (
@@ -86,6 +106,9 @@ export function Field({ field, f, value, onChange, error }) {
         placeholder={placeholder}
         onChange={alCambiar}
         autoComplete="off"
+        min={def.min}
+        max={def.max}
+        step={def.step}
       />
     );
   }

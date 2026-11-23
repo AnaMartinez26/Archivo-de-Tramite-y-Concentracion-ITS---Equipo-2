@@ -12,8 +12,12 @@ public class AppDbContext : DbContext
     public DbSet<Rol> Roles { get; set; }
     public DbSet<Documento> Documentos { get; set; }
     public DbSet<Expediente> Expedientes { get; set; }
+    public DbSet<Caja> Cajas { get; set; }
     public DbSet<Tramite> Tramites { get; set; }
-
+    public DbSet<Clasificacion> Clasificaciones { get; set; }
+    public DbSet<Etiqueta> Etiquetas { get; set; }
+    public DbSet<Disposicion> Disposiciones { get; set; }
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Carga automáticamente todas las clases de Data/Configurations

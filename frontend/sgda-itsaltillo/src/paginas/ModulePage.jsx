@@ -9,19 +9,24 @@ import {
   useToast
 } from '../componentes/ui/index.js';
 import { PageTitle } from '../componentes/layout/Layout.jsx';
-import { getToken } from '../api/sesion.js';
+import { getToken, getUsuario, setUsuario } from '../api/sesion.js';
 import { apiFetch } from '../api/cliente.js';
 import {
   cargarUsuariosYRoles,
   crearUsuario,
-  cambiarEstadoUsuario
+  actualizarUsuario,
+  cambiarEstadoUsuario,
+  restablecerPasswordUsuario,
+  eliminarUsuario
 } from '../modulos/usuarios/usuarios.service.js';
 import {
   mapDocumentoDto,
   listarDocumentos,
   crearDocumento,
+  actualizarDocumento,
   subirArchivoPdf,
   descargarArchivoPdfBlob,
+  descargarPdfEnNavegador,
   eliminarDocumentos
 } from '../modulos/digitalizacion/digitalizacion.service.js';
 import {
@@ -55,6 +60,10 @@ export default function ModulePage({ m }) {
   const [log, setLog] = useState([]);
   const [url, setUrl] = useState('');
   const [pendingFile, setPendingFile] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [pwdTarget, setPwdTarget] = useState(null);
+  const [nuevaPwd, setNuevaPwd] = useState('');
+  const [confPwd, setConfPwd] = useState('');
   const [n, setN] = useState(1);
 const [catalogos, setCatalogos] = useState({
   clasificaciones: [],
@@ -78,6 +87,8 @@ const reload = async () => {
   // Carga inicial según el módulo
   useEffect(() => {
     setPendingFile(null);
+    setEditId(null);
+    setPwdTarget(null);
     if (!getToken()) return;
     let active = true;
 
@@ -200,6 +211,7 @@ const reload = async () => {
   const reset = () => {
     setV({});
     setErr({});
+    setEditId(null);
     setOpen(false);
   };
 
@@ -209,7 +221,8 @@ const reload = async () => {
       const clave = f.k || f.name;
       const valor = v[clave];
       const vacio = Array.isArray(valor) ? !valor.length : !String(valor || '').trim();
-      if ((f.req || f.required) && vacio) {
+      const omitirReq = m.path === '/usuarios' && editId && clave === 'contrasena';
+      if ((f.req || f.required) && !omitirReq && vacio) {
         errores[clave] = 'Este campo es obligatorio.';
       }
     });
@@ -219,16 +232,35 @@ const reload = async () => {
 
     if (m.path === '/usuarios' && getToken()) {
       try {
+        if (editId) {
+          const { dto, fila, message } = await actualizarUsuario(editId, v, rolesMap);
+          if (fila) setRows(r => r.map(x => (x.id === editId ? fila : x)));
+          if (dto && getUsuario()?.id === editId) setUsuario(dto);
+          reset();
+          return toast(message);
+        }
         const { fila, message } = await crearUsuario(v, rolesMap);
         if (fila) setRows(r => [...r, fila]);
         reset();
         return toast(message);
       } catch (ex) {
-        return toast(ex?.message || 'Error al registrar usuario', 'err');
+        return toast(
+          ex?.message || (editId ? 'Error al actualizar usuario' : 'Error al registrar usuario'),
+          'err'
+        );
       }
     }
 
     if (m.path === '/digitalizacion' && getToken()) {
+      if (
+        editId &&
+        rows.find(x => x.id === editId)?.folio === String(v.folio || '').trim().toUpperCase()
+      ) {
+        return toast(
+          'Estás editando un documento existente: pulsa "Guardar Cambios" o "Limpiar Lote"',
+          'info'
+        );
+      }
       try {
         const res = await crearDocumento(v);
         if (res?.data) {
@@ -335,10 +367,21 @@ const reload = async () => {
   const run = b => {
     const go = () => {
       if (b.a === 'save' || b.a === 'cfg') return save();
-      if (b.a === 'open') return setOpen(true);
+      if (b.a === 'open') {
+        setEditId(null);
+        setV({});
+        setErr({});
+        return setOpen(true);
+      }
+      if (b.a === 'saveUserBtn' && m.path === '/usuarios') {
+        if (editId) return save();
+        return toast('Pulsa "Editar" en la fila del usuario que deseas modificar', 'info');
+      }
       if (b.a === 'cancel') {
         reset();
-        return toast('Cambios cancelados', 'info');
+        setQ('');
+        setFl({});
+        return toast('Cambios y filtros restablecidos', 'info');
       }
       if (b.a === 'flag') {
         const clave = b.l.includes('QR') ? 'QR' : b.l.includes('Barras') ? 'Bar' : 'Et';
@@ -360,23 +403,64 @@ const reload = async () => {
         return;
       }
 
+      if (b.a === 'update' && m.path === '/digitalizacion' && getToken()) {
+        const idDoc = editId || (sel.length === 1 ? sel[0] : null);
+        if (!idDoc) {
+          return toast(
+            sel.length > 1
+              ? 'Selecciona un solo documento para editar'
+              : 'Pulsa "Editar" en la fila del documento que deseas modificar',
+            'err'
+          );
+        }
+        if (!String(v.titulo || '').trim()) {
+          setErr({ titulo: 'Este campo es obligatorio.' });
+          return toast('Ingresa el título del documento antes de guardar cambios', 'err');
+        }
+        (async () => {
+          try {
+            const res = await actualizarDocumento(idDoc, v);
+            let docFinal = res?.data;
+            let msg = res?.message || 'Documento actualizado correctamente';
+
+            if (pendingFile && docFinal) {
+              const up = await subirArchivoPdf(idDoc, pendingFile);
+              if (up?.data) {
+                docFinal = up.data;
+                msg = 'Documento y archivo PDF actualizados correctamente';
+              }
+              setPendingFile(null);
+            }
+
+            if (docFinal) {
+              setRows(r => r.map(x => (x.id === idDoc ? mapDocumentoDto(docFinal) : x)));
+            }
+            reset();
+            toast(msg);
+          } catch (ex) {
+            toast(ex?.message || 'Error al actualizar el documento', 'err');
+          }
+        })();
+        return;
+      }
+
       if (b.a === 'del' || b.a === 'clear') {
         // En Digitalización "Limpiar Lote" solo limpia el formulario: nunca borra en el servidor
         if (b.a === 'clear' && m.path === '/digitalizacion') {
           setV({});
           setErr({});
+          setEditId(null);
           setSel([]);
           setUrl('');
           setPendingFile(null);
           return toast('Lote limpiado', 'info');
         }
         const ids = b.a === 'clear' ? rows.map(r => r.id) : sel;
-        if (!ids.length) return toast('No hay registros para quitar', 'err');
+        if (!ids.length) return toast('Selecciona al menos un registro para eliminar', 'err');
         return setCf({
           msg: '¿Quitar el/los registro(s) seleccionado(s)?',
           ok: async () => {
-            if (m.path === '/digitalizacion' && getToken()) {
-                          if (m.path === '/clasificacion' && m.api?.remove && getToken()) {
+            if (m.path === '/clasificacion' && m.api?.remove && getToken()) {
               try {
                 for (const id of ids) {
                   await apiFetch(m.api.remove(id), {
@@ -395,10 +479,12 @@ const reload = async () => {
               }
             }
 
+            if (m.path === '/digitalizacion' && getToken()) {
               const { eliminados, errorMensaje } = await eliminarDocumentos(ids);
               setRows(r => r.filter(x => !eliminados.includes(x.id)));
               setSel(s => s.filter(id => !eliminados.includes(id)));
               if (eliminados.includes(sel[0])) setUrl('');
+              if (eliminados.includes(editId)) reset();
               if (eliminados.length === ids.length) {
                 return toast('Documento(s) eliminado(s) del servidor');
               }
@@ -407,6 +493,7 @@ const reload = async () => {
                 'err'
               );
             }
+
             setRows(r => r.filter(x => !ids.includes(x.id)));
             setSel([]);
             if (b.a === 'clear') setUrl('');
@@ -502,6 +589,99 @@ const reload = async () => {
 
   const act = (a, r) => {
     const accion = typeof a === 'string' ? a : a?.label || '';
+
+    if (m.path === '/digitalizacion') {
+      if (accion === 'Editar') {
+        setEditId(r.id);
+        setSel([r.id]);
+        setErr({});
+        setV({
+          folio: r.folio || '',
+          titulo: r.titulo || '',
+          tipo_documento: r.tipo_documento || '',
+          numero_expediente: r.numero_expediente || '',
+          fecha_creacion: r.fecha_creacion || ''
+        });
+        window.scrollTo?.({ top: 0, behavior: 'smooth' });
+        return toast(`Editando "${r.folio}". Modifica los campos y pulsa "Guardar Cambios".`, 'info');
+      }
+
+      if (accion === 'Descargar PDF') {
+        (async () => {
+          try {
+            await descargarPdfEnNavegador(r.id, r.folio);
+            toast(`Descargando ${r.folio}.pdf`);
+          } catch (ex) {
+            toast(ex?.message || 'No se pudo descargar el PDF', 'err');
+          }
+        })();
+        return;
+      }
+
+      if (accion === 'Eliminar') {
+        return setCf({
+          msg: `¿Confirmas eliminar el documento "${r.folio} — ${r.titulo}"?`,
+          ok: async () => {
+            if (!getToken()) return;
+            const { eliminados, errorMensaje } = await eliminarDocumentos([r.id]);
+            if (eliminados.includes(r.id)) {
+              setRows(x => x.filter(y => y.id !== r.id));
+              setSel(s => s.filter(id => id !== r.id));
+              if (sel[0] === r.id) setUrl('');
+              if (editId === r.id) reset();
+              toast('Documento eliminado del servidor');
+            } else {
+              toast(errorMensaje || 'No se pudo eliminar el documento', 'err');
+            }
+          }
+        });
+      }
+    }
+
+    if (m.path === '/usuarios') {
+      if (accion === 'Editar') {
+        setEditId(r.id);
+        setErr({});
+        setV({
+          nombre: r.nombre_pila || r.nombre || '',
+          apellido_p: r.apellido_p || '',
+          apellido_m: r.apellido_m || '',
+          correo: r.correo || '',
+          contrasena: '',
+          rol: r.rol || '',
+          estado: r.estado || 'Activo',
+          numero_empleado: String(r.numero_empleado ?? ''),
+          departamento:
+            r.departamento_raw !== undefined ? r.departamento_raw : r.departamento || '',
+          puesto: r.puesto || ''
+        });
+        return setOpen(true);
+      }
+
+      if (accion === 'Restablecer contraseña') {
+        setPwdTarget(r);
+        setNuevaPwd('');
+        setConfPwd('');
+        return;
+      }
+
+      if (accion === 'Eliminar') {
+        return setCf({
+          msg: `¿Confirmas eliminar al usuario "${r.nombre}"? Si tiene documentos o trámites asociados, usa "Desactivar".`,
+          ok: async () => {
+            if (!getToken()) return;
+            try {
+              const { message } = await eliminarUsuario(r.id);
+              setRows(x => x.filter(y => y.id !== r.id));
+              toast(message);
+            } catch (ex) {
+              toast(ex?.message || 'No se pudo eliminar el usuario', 'err');
+            }
+          }
+        });
+      }
+    }
+
     const esCambioEstadoUsuario =
       m.path === '/usuarios' && (accion === 'Desactivar' || accion === 'Activar');
 
@@ -620,13 +800,26 @@ const reload = async () => {
           }));
         }
 
+        const esPwdEdicion = m.path === '/usuarios' && editId && f.k === 'contrasena';
+        const campoConfig = esPwdEdicion
+          ? { ...f, options, req: 0, ph: 'Opcional: dejar vacío para mantener actual' }
+          : { ...f, options };
+
         return (
           <Field
             key={f.k}
-            f={{ ...f, options }}
+            f={campoConfig}
             value={v[f.k]}
             error={err[f.k]}
-            onChange={x => setV(s => ({ ...s, [f.k]: x }))}
+            onChange={x => {
+              if (m.path === '/digitalizacion' && editId && f.k === 'folio') {
+                return toast(
+                  'El folio no es modificable al editar. Usa "Limpiar Lote" para crear otro.',
+                  'info'
+                );
+              }
+              setV(s => ({ ...s, [f.k]: x }));
+            }}
           />
         );
       })}
@@ -697,12 +890,72 @@ const reload = async () => {
       )}
       {m.extra === 'timeline' && <Timeline log={log} />}
       {open && (
-        <Modal title={m.modal} onClose={reset}>
+        <Modal
+          title={m.path === '/usuarios' && editId ? 'Editar Usuario' : m.modal}
+          onClose={reset}
+        >
           {form}
           <div className="row end">
             <Button onClick={reset}>Cancelar</Button>
             <Button p i="Save" onClick={save}>
-              Guardar
+              {m.path === '/usuarios' && editId ? 'Guardar Cambios' : 'Guardar'}
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {pwdTarget && (
+        <Modal
+          title={`Restablecer contraseña — ${pwdTarget.nombre}`}
+          onClose={() => setPwdTarget(null)}
+        >
+          <div className="grid2">
+            <Field
+              f={{
+                k: 'nueva_pwd',
+                label: 'Nueva Contraseña',
+                type: 'password',
+                req: 1,
+                ph: 'Mínimo 8 caracteres'
+              }}
+              value={nuevaPwd}
+              onChange={setNuevaPwd}
+            />
+            <Field
+              f={{
+                k: 'conf_pwd',
+                label: 'Confirmar Contraseña',
+                type: 'password',
+                req: 1,
+                ph: 'Repite la contraseña'
+              }}
+              value={confPwd}
+              onChange={setConfPwd}
+            />
+          </div>
+          <div className="row end">
+            <Button onClick={() => setPwdTarget(null)}>Cancelar</Button>
+            <Button
+              p
+              i="Save"
+              onClick={async () => {
+                if (nuevaPwd.length < 8) {
+                  return toast('La nueva contraseña debe tener al menos 8 caracteres', 'err');
+                }
+                if (nuevaPwd !== confPwd) {
+                  return toast('Las contraseñas no coinciden', 'err');
+                }
+                try {
+                  const { message } = await restablecerPasswordUsuario(pwdTarget.id, nuevaPwd);
+                  setPwdTarget(null);
+                  setNuevaPwd('');
+                  setConfPwd('');
+                  toast(message);
+                } catch (ex) {
+                  toast(ex?.message || 'No se pudo restablecer la contraseña', 'err');
+                }
+              }}
+            >
+              Guardar Contraseña
             </Button>
           </div>
         </Modal>

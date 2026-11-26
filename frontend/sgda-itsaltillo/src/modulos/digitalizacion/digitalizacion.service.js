@@ -32,6 +32,18 @@ export async function crearDocumento(valores) {
   });
 }
 
+export async function actualizarDocumento(idDoc, valores) {
+  return apiFetch(`/digitalizacion/${idDoc}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      titulo: String(valores.titulo || '').trim(),
+      tipoDocumento: valores.tipo_documento ? String(valores.tipo_documento).trim() : null,
+      numeroExpediente: String(valores.numero_expediente || '').trim() || null,
+      fechaCreacion: valores.fecha_creacion || null
+    })
+  });
+}
+
 export async function subirArchivoPdf(idDoc, archivo) {
   const fd = new FormData();
   fd.append('archivo', archivo);
@@ -40,6 +52,18 @@ export async function subirArchivoPdf(idDoc, archivo) {
 
 export async function descargarArchivoPdfBlob(idDoc) {
   return apiBlob(`/digitalizacion/${idDoc}/archivo`);
+}
+
+export async function descargarPdfEnNavegador(idDoc, folio) {
+  const blob = await descargarArchivoPdfBlob(idDoc);
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `${String(folio || `documento-${idDoc}`).replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 export async function eliminarDocumentos(ids) {

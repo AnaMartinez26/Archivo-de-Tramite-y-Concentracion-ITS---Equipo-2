@@ -27,10 +27,17 @@ export default {
     c('formato', 'Formato'),
     c('fecha_digitalizacion', 'Fecha de Digitalización')
   ],
+  acts: [
+    'Editar',
+    fila => (fila.ruta_archivo && fila.ruta_archivo !== '—' ? 'Descargar PDF' : null),
+    'Eliminar'
+  ],
   btns: [
     { l: 'Registrar Documento', a: 'save', i: 'Plus' },
+    { l: 'Guardar Cambios', a: 'update', i: 'Save' },
     { l: 'Subir Archivo Adjunto', a: 'pick', p: 1, i: 'Upload' },
+    { l: 'Eliminar Seleccionados', a: 'del', d: 1, i: 'Trash2' },
     { l: 'Sincronizar Resguardo Digital', c: 1, i: 'RefreshCw' },
-    { l: 'Limpiar Lote', a: 'clear', d: 1, i: 'Eraser' }
+    { l: 'Limpiar Lote', a: 'clear', i: 'Eraser' }
   ]
 };

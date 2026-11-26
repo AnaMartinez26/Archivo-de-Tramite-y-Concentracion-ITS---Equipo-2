@@ -69,6 +69,51 @@ a {
   color: #c5d3e6;
 }
 
+.side-role {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem 1rem;
+  font-size: .78rem;
+  font-weight: 600;
+  color: #b5c7de;
+  background: #0f2036;
+  border-bottom: 1px solid var(--navy-mid);
+}
+
+.role-banner {
+  border-left: 4px solid var(--navy);
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+
+.role-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.role-count {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--navy);
+  background: #e6edf6;
+  padding: .25rem .65rem;
+  border-radius: 99px;
+}
+
+.role-desc {
+  margin: 0;
+  color: var(--mut);
+  font-size: .92rem;
+}
+
 .logo {
   width: 52px;
   height: 52px;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, Outlet, useLocation, useNavigate } from '../../router/router.jsx';
 import { Icon, useToast } from '../ui/index.js';
 import { MODS } from '../../modulos/index.js';
+import { filtrarModulosPorRol } from '../../modulos/roles.config.js';
 import { getUsuario, clearSesion } from '../../api/sesion.js';
 import LogoImg from '../../assets/its-logo.png';
 
@@ -24,6 +25,7 @@ export default function Layout() {
   const nav = useNavigate();
   const toast = useToast();
   const usuario = getUsuario();
+  const modulosVisibles = filtrarModulosPorRol(MODS, usuario?.rol);
   const moduloActual = MODS.find(x => x.path === pathname);
 
   const salir = ev => {
@@ -43,12 +45,18 @@ export default function Layout() {
             <small>Archivo de Concentración</small>
           </div>
         </div>
+        {usuario?.rol && (
+          <div className="side-role">
+            <Icon name="ShieldCheck" size={14} />
+            <span>Vista: {usuario.rol}</span>
+          </div>
+        )}
         <nav onClick={() => setMenuAbierto(false)}>
           <NavLink to="/dashboard">
             <Icon name="Home" />
             Inicio
           </NavLink>
-          {MODS.map(x => (
+          {modulosVisibles.map(x => (
             <NavLink key={x.path} to={x.path}>
               <Icon name={x.icon} />
               {x.cu ? `${x.cu} ${x.title}` : x.title}

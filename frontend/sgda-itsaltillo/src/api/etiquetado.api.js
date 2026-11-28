@@ -7,15 +7,19 @@ const txt=x=>String(x??'').trim();
 export const api={
   list:'/expedientes',
   create:'/expedientes',
-  toRow:d=>({
-    id:d.id,
-    numero_expediente:d.numeroExpediente,
-    titulo:d.titulo,
-    codigo_etiqueta:d.codigoEtiqueta,
-    clasificacion:d.clasificacion,
-    caja:d.cajaNumero??'',
-    estado:d.estado
-  }),
+  toRow: d => ({
+  id: d.id,
+  numero_expediente: d.numeroExpediente,
+  titulo: d.titulo,
+  codigo_etiqueta: d.codigoEtiqueta || '',
+  clasificacion: d.clasificacion || '',
+  id_clasificacion: d.idClasificacion ?? null,
+  caja: d.cajaNumero ?? '',
+  fecha_apertura: d.fechaApertura
+    ? String(d.fechaApertura).slice(0, 10)
+    : '',
+  estado: d.estado || 'Activo'
+}),
   toBody:v=>{
     let cajaNumero=null;
     if(txt(v.caja)!==''){

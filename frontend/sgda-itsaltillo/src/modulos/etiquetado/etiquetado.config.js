@@ -11,6 +11,7 @@ export default {
   sub: 'Expediente y marbete',
   icon: 'Tags',
   extra: 'label',
+  select: 1,
   api,
 
   fields: [

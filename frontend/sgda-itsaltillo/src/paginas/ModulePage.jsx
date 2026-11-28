@@ -64,7 +64,13 @@ import {
   imprimirVale
 } from '../modulos/prestamos/prestamos.service.js';
 //import { Integrity } from '../modulos/auditoria/Integrity.jsx';
-
+import { Integrity } from '../modulos/auditoria/Integrity.jsx';
+import {
+  listarAuditoria,
+  registrarComentarioAuditoria,
+  ejecutarVerificacionIntegridad,
+  exportarReporteAuditoriaCsv
+} from '../modulos/auditoria/auditoria.service.js';
 // Módulos cuyo comportamiento proviene del segundo ModulePage
 const MODULOS_GESTION = ['/clasificacion', '/vigencias', '/prestamos'];
 
@@ -87,6 +93,7 @@ export default function ModulePage({ m }) {
   const [nuevaPwd, setNuevaPwd] = useState('');
   const [confPwd, setConfPwd] = useState('');
   const [n, setN] = useState(1);
+  const [integrityReport, setIntegrityReport] = useState(null);
   const editRef = useRef(null); // id del nivel o vigencia que se está modificando
   const [catalogos, setCatalogos] = useState({
 
@@ -179,6 +186,24 @@ const reload = async () => {
           setLog(construirLogInicial(tramites));
         } catch (ex) {
           if (active) toast(ex?.message || 'Error al cargar trámites', 'err');
+        }
+      })();
+      } else if (m.path === '/auditoria') {
+      setIntegrityReport(null);
+      (async () => {
+        try {
+          const bitacora = await listarAuditoria();
+          if (!active) return;
+          setRows(bitacora);
+        } catch (ex) {
+          if (active) {
+            toast(
+              ex?.status === 403
+                ? 'No tienes permisos para consultar la bitácora de auditoría'
+                : ex?.message || 'Error al cargar la bitácora',
+              'err'
+            );
+          }
         }
       })();
     } else if (m.api?.list) {
@@ -471,6 +496,17 @@ const seleccionarCajaAlmacenamiento = fila => {
         return toast(res?.message || 'Estructura archivística actualizada');
       } catch (ex) {
         return toast(ex?.message || 'Error al guardar el nivel archivístico', 'err');
+      }
+    }
+
+        if (m.path === '/auditoria' && getToken()) {
+      try {
+        const res = await registrarComentarioAuditoria(v);
+        setRows(await listarAuditoria());
+        reset();
+        return toast(res?.message || 'Observación registrada en bitácora');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al registrar observación', 'err');
       }
     }
 
@@ -832,6 +868,36 @@ const seleccionarCajaAlmacenamiento = fila => {
         return toast(b.l + ': registrado');
       }
 
+            if (b.a === 'exportar_auditoria' && m.path === '/auditoria') {
+        try {
+          exportarReporteAuditoriaCsv(fil);
+          return toast('Reporte de auditoría descargado (CSV)');
+        } catch (ex) {
+          return toast(ex?.message || 'No se pudo exportar el reporte', 'err');
+        }
+      }
+
+      if (b.a === 'verificar_integridad' && m.path === '/auditoria') {
+        if (!getToken()) return toast('Inicia sesión para ejecutar la verificación', 'err');
+        (async () => {
+          try {
+            const rep = await ejecutarVerificacionIntegridad();
+            setIntegrityReport(rep);
+            setRows(await listarAuditoria());
+            const sinErrores = rep.archivosFaltantes === 0 && rep.archivosCorruptos === 0;
+            toast(
+              sinErrores
+                ? `Integridad verificada: ${rep.archivosEnDisco} archivo(s) íntegro(s)`
+                : `Atención: ${rep.archivosFaltantes} faltante(s) y ${rep.archivosCorruptos} corrupto(s)`,
+              sinErrores ? 'info' : 'err'
+            );
+          } catch (ex) {
+            toast(ex?.message || 'Error al verificar integridad', 'err');
+          }
+        })();
+        return;
+      }
+
       if (b.a === 'custom') {
         if (b.need && !needSel()) return;
 
@@ -1164,6 +1230,7 @@ const seleccionarCajaAlmacenamiento = fila => {
       {m.extra === 'upload' && <PDFPreview url={url} />}
       {m.extra === 'tree' && <TreeView rows={rows} />}
       {m.extra === 'map' && <StorageMap rows={rows} />}
+      {m.extra === 'integrity' && <Integrity reporte={integrityReport} />}
       <div className="card pad">
         <div className="row wrap">
           {m.btns.map(b => (

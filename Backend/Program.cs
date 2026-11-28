@@ -33,6 +33,7 @@ app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<AuditoriaMiddleware>();
 
 app.MapControllers();
 

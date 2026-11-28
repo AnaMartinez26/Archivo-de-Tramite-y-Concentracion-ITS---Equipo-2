@@ -52,21 +52,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEtiquetaRepository, EtiquetaRepository>();
         services.AddScoped<IEtiquetaService, EtiquetaService>();
 
-        //Disposición
         services.AddScoped<IDisposicionRepository, DisposicionRepository>();
         services.AddScoped<IDisposicionService, DisposicionService>();
+
+        // Aseguramiento y cumplimiento normativo (bitácora)
+        services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
+        services.AddScoped<IAuditoriaService, AuditoriaService>();
         
-        //Vigencia
-        services.AddScoped<IVigenciaRepository, VigenciaRepository>();
-        services.AddScoped<IVigenciaService, VigenciaService>();
-
-        //Préstamo
-        services.AddScoped<IPrestamoRepository, PrestamoRepository>();
-        services.AddScoped<IPrestamoService, PrestamoService>();
-
-        //Auditoría
-        //services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
-        //services.AddScoped<IAuditoriaService, AuditoriaService>();
         return services;
     }
 
@@ -75,6 +67,7 @@ public static class ServiceCollectionExtensions
         IConfiguration config)
     {
         var key = config["Jwt:Key"];
+
         if (string.IsNullOrWhiteSpace(key) ||
             Encoding.UTF8.GetByteCount(key) < 32)
         {

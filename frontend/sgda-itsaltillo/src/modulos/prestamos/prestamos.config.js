@@ -38,9 +38,11 @@ export default {
     c('estado', 'Estado')
   ],
   acts: ['Registrar Devolución', 'Extender Plazo'],
-  btns: [
-    { l: 'Registrar Nueva Salida', a: 'save', p: 1, i: 'Plus' },
-    { l: 'Confirmar Devolución', c: 1, i: 'CheckCircle2' },
-    { l: 'Imprimir Vale de Préstamo', i: 'Printer' }
-  ]
+ 
+btns: [
+  { l: 'Registrar Nueva Salida', a: 'save', p: 1, i: 'Plus' },
+  { l: 'Confirmar Devolución', a: 'devolver', c: 1, i: 'CheckCircle2' },
+  { l: 'Imprimir Vale de Préstamo', a: 'vale', i: 'Printer' }
+]
+
 };

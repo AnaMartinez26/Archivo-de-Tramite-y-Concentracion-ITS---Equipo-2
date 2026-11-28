@@ -31,9 +31,17 @@ export default {
     c('estado', 'Alerta de Vencimiento')
   ],
   btns: [
-    { l: 'Registrar Vigencia', a: 'save', i: 'Plus' },
-    { l: 'Actualizar Tablas de Retención (CADIDO)', p: 1, c: 1, i: 'RefreshCw' },
-    { l: 'Notificar Expedientes Vencidos', c: 1, i: 'BellRing' },
-    { l: 'Generar Alertas', i: 'AlertTriangle' }
-  ]
+  { l: 'Registrar Vigencia', a: 'save', i: 'Plus' },
+  {
+    l: 'Notificar Expedientes Vencidos',
+    a: 'vencidos',
+    c: 1,
+    i: 'BellRing'
+  },
+  {
+    l: 'Generar Alertas',
+    a: 'alertas',
+    i: 'AlertTriangle'
+  }
+]
 };

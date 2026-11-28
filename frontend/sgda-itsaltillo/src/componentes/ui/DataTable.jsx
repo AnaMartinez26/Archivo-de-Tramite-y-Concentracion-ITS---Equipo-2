@@ -33,7 +33,7 @@ function Celda({ columna, fila }) {
   return valor || '—';
 }
 
-export function DataTable({ caption, cols, rows, acts, select, sel, setSel, onAct }) {
+export function DataTable({ caption, cols, rows, acts, select, sel, setSel, onAct, onRowClick, selectedRowId }) {
   const alternar = id => setSel(sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id]);
 
   return (
@@ -56,42 +56,54 @@ export function DataTable({ caption, cols, rows, acts, select, sel, setSel, onAc
           </thead>
           <tbody>
             {rows.map(fila => (
-              <tr key={fila.id}>
-                {select && (
-                  <td>
-                    <input
-                      type="checkbox"
-                      aria-label={'Seleccionar fila ' + fila.id}
-                      checked={sel.includes(fila.id)}
-                      onChange={() => alternar(fila.id)}
-                    />
-                  </td>
-                )}
-                {cols.map(c => (
-                  <td key={c.name || c.k}>
-                    <Celda columna={c} fila={fila} />
-                  </td>
-                ))}
-                {acts && (
-                  <td>
-                    <div className="row">
-                      {acts.map((a, idx) => {
-                        const resuelta = typeof a === 'function' ? a(fila) : a;
-                        if (!resuelta) return null;
-                        const etiqueta = typeof resuelta === 'string' ? resuelta : resuelta.label;
-                        return (
-                          <Button
-                            key={resuelta.key || etiqueta || idx}
-                            onClick={() => onAct(resuelta, fila)}
-                          >
-                            {etiqueta}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </td>
-                )}
-              </tr>
+             <tr
+  key={fila.id}
+  onClick={onRowClick ? () => onRowClick(fila) : undefined}
+  aria-selected={selectedRowId === fila.id}
+  style={{
+    cursor: onRowClick ? 'pointer' : undefined,
+    backgroundColor: selectedRowId === fila.id ? '#e8f0fe' : undefined
+  }}
+>
+  {select && (
+    <td>
+      <input
+        type="checkbox"
+        aria-label={'Seleccionar fila ' + fila.id}
+        checked={sel.includes(fila.id)}
+        onClick={e => e.stopPropagation()}
+        onChange={() => alternar(fila.id)}
+      />
+    </td>
+  )}
+
+  {cols.map(c => (
+    <td key={c.name || c.k}>
+      <Celda columna={c} fila={fila} />
+    </td>
+  ))}
+
+  {acts && (
+    <td onClick={e => e.stopPropagation()}>
+      <div className="row">
+        {acts.map((a, idx) => {
+          const resuelta = typeof a === 'function' ? a(fila) : a;
+          if (!resuelta) return null;
+          const etiqueta = typeof resuelta === 'string' ? resuelta : resuelta.label;
+
+          return (
+            <Button
+              key={resuelta.key || etiqueta || idx}
+              onClick={() => onAct(resuelta, fila)}
+            >
+              {etiqueta}
+            </Button>
+          );
+        })}
+      </div>
+    </td>
+  )}
+</tr>
             ))}
           </tbody>
         </table>

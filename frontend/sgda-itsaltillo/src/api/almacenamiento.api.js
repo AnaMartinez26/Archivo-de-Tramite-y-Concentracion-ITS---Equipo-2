@@ -39,19 +39,59 @@ export async function moverUbicacion({v,sel,toast,reload,apiFetch,setV}){
 }
 
 // Imprimir Guía de Pasillo: de los pasillos de las cajas seleccionadas (o de todos si no hay selección)
-export function imprimirGuia({rows,sel,toast}){
-  const base=sel.length?rows.filter(r=>sel.includes(r.id)):rows;
-  if(!base.length)return toast('No hay cajas registradas para imprimir','err');
-  const pasillos=[...new Set(base.map(r=>parseUbicacion(r.ubicacion).pasillo))];
-  const pas=new Set(pasillos);
-  const lista=rows.filter(r=>pas.has(parseUbicacion(r.ubicacion).pasillo))
-    .sort((a,b)=>a.numero_caja-b.numero_caja);
-  const bloques=pasillos.sort().map(p=>{
-    const filas=lista.filter(r=>parseUbicacion(r.ubicacion).pasillo===p).map(r=>{
-      const u=parseUbicacion(r.ubicacion);
-      return `<tr><td>${esc(u.estante)}</td><td>${esc(u.bateria)}</td><td>${esc(r.numero_caja)}</td><td>${esc(r.codigo_etiqueta)}</td><td>${esc(r.ocupacion??0)} / ${r.capacidad?esc(r.capacidad):'—'}</td><td>${esc(r.estado)}</td></tr>`;
-    }).join('');
-    return `<h2>${esc(p)}</h2><table><thead><tr><th>Estante</th><th>Batería</th><th>Caja</th><th>Código de etiqueta</th><th>Expedientes / Capacidad</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table>`;
+export function imprimirGuia({ rows, sel, toast }) {
+  const base = sel.length
+    ? rows.filter(r => sel.includes(r.id))
+    : rows;
+
+  if (!base.length) {
+    return toast('No hay cajas registradas', 'err');
+  }
+
+  const pasillos = [
+    ...new Set(base.map(r => parseUbicacion(r.ubicacion).pasillo))
+  ];
+
+  const pas = new Set(pasillos);
+
+  const lista = rows
+    .filter(r => pas.has(parseUbicacion(r.ubicacion).pasillo))
+    .sort((a, b) => a.numero_caja - b.numero_caja);
+
+  const bloques = pasillos.sort().map(p => {
+    const filas = lista
+      .filter(r => parseUbicacion(r.ubicacion).pasillo === p)
+      .map(r => `
+        <tr>
+          <td>${esc(r.numero_caja)}</td>
+          <td>${esc(r.codigo_etiqueta)}</td>
+          <td>${esc(r.ocupacion ?? 0)} / ${esc(r.capacidad ?? '—')}</td>
+          <td>${esc(r.estado)}</td>
+        </tr>
+      `).join('');
+
+    return `
+      <h2>${esc(p)}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Caja</th>
+            <th>Código</th>
+            <th>Expedientes / Capacidad</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
   }).join('');
-  printHtml('Guía de pasillo',`<div class="head"><h1>Guía de Pasillo</h1><p>Instituto Tecnológico de Saltillo · Archivo de Concentración</p><small>Impreso el ${esc(new Date().toLocaleString('es-MX'))}</small></div>${bloques}`);
+
+  printHtml(
+    'Guía de pasillo',
+    `<div class="head">
+      <h1>Guía de Pasillo</h1>
+      <p>Instituto Tecnológico de Saltillo · Archivo de Concentración</p>
+      <small>${esc(new Date().toLocaleString('es-MX'))}</small>
+    </div>${bloques}`
+  );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Button,
   Field,
@@ -38,13 +38,35 @@ import {
   cambiarEstadoVarios
 } from '../modulos/workflow/workflow.service.js';
 import { TreeView } from '../modulos/clasificacion/TreeView.jsx';
+import {
+  listarVigencias,
+  obtenerResumenVigencias,
+  registrarVigencia,
+  actualizarVigencia
+} from '../modulos/vigencias/vigencias.service.js';
+import {
+  listarClasificaciones,
+  crearClasificacion,
+  actualizarClasificacion,
+  eliminarClasificaciones
+} from '../modulos/clasificacion/clasificacion.service.js';
 import { Marbete } from '../modulos/etiquetado/Marbete.jsx';
 import { FileUpload } from '../modulos/digitalizacion/FileUpload.jsx';
 import { PDFPreview } from '../modulos/digitalizacion/PDFPreview.jsx';
 import { StorageMap } from '../modulos/almacenamiento/StorageMap.jsx';
 import { Timeline } from '../modulos/workflow/Timeline.jsx';
 import { Legend } from '../modulos/vigencias/Legend.jsx';
-import { Integrity } from '../modulos/auditoria/Integrity.jsx';
+import {
+  listarPrestamos,
+  registrarPrestamo,
+  extenderPlazoPrestamo,
+  devolverPrestamos,
+  imprimirVale
+} from '../modulos/prestamos/prestamos.service.js';
+//import { Integrity } from '../modulos/auditoria/Integrity.jsx';
+
+// Módulos cuyo comportamiento proviene del segundo ModulePage
+const MODULOS_GESTION = ['/clasificacion', '/vigencias', '/prestamos'];
 
 export default function ModulePage({ m }) {
   const toast = useToast();
@@ -65,7 +87,9 @@ export default function ModulePage({ m }) {
   const [nuevaPwd, setNuevaPwd] = useState('');
   const [confPwd, setConfPwd] = useState('');
   const [n, setN] = useState(1);
-const [catalogos, setCatalogos] = useState({
+  const editRef = useRef(null); // id del nivel o vigencia que se está modificando
+  const [catalogos, setCatalogos] = useState({
+
   clasificaciones: [],
   cajas: [],
   expedientes: []
@@ -89,6 +113,7 @@ const reload = async () => {
     setPendingFile(null);
     setEditId(null);
     setPwdTarget(null);
+    editRef.current = null;
     if (!getToken()) return;
     let active = true;
 
@@ -115,7 +140,37 @@ const reload = async () => {
           if (active) toast(ex?.message || 'Error al cargar documentos', 'err');
         }
       })();
-        } else if (m.path === '/workflow') {
+    } else if (m.path === '/clasificacion') {
+      (async () => {
+        try {
+          const niveles = await listarClasificaciones();
+          if (!active) return;
+          setRows(niveles);
+        } catch (ex) {
+          if (active) toast(ex?.message || 'Error al cargar la estructura archivística', 'err');
+        }
+      })();
+    } else if (m.path === '/prestamos') {
+      (async () => {
+        try {
+          const prestamos = await listarPrestamos();
+          if (!active) return;
+          setRows(prestamos);
+        } catch (ex) {
+          if (active) toast(ex?.message || 'Error al cargar los préstamos', 'err');
+        }
+      })();
+    } else if (m.path === '/vigencias') {
+      (async () => {
+        try {
+          const vigencias = await listarVigencias();
+          if (!active) return;
+          setRows(vigencias);
+        } catch (ex) {
+          if (active) toast(ex?.message || 'Error al cargar las vigencias', 'err');
+        }
+      })();
+    } else if (m.path === '/workflow') {
       (async () => {
         try {
           const tramites = await listarTramites();
@@ -209,11 +264,75 @@ const reload = async () => {
 
   const now = () => new Date().toLocaleString('es-MX');
   const reset = () => {
+    editRef.current = null;
     setV({});
     setErr({});
     setEditId(null);
     setOpen(false);
   };
+
+  const seleccionarPrestamo = fila => {
+  if (m.path !== '/prestamos') return;
+
+  setSel([fila.id]);
+  setErr({});
+
+  setV({
+    folio_pase_salida: fila.folio_pase_salida || '',
+    numero_expediente: fila.numero_expediente || '',
+    numero_empleado: fila.numero_empleado || '',
+    tipo_movimiento: fila.tipo_movimiento || '',
+    fecha_salida: fila.fecha_salida || '',
+    fecha_regreso: fila.fecha_regreso || '',
+    motivo: fila.motivo || '',
+    estado: fila.estado || ''
+  });
+};
+
+const seleccionarExpedienteEtiquetado = fila => {
+  if (m.path !== '/etiquetado') return;
+
+  const clasificacion = catalogos.clasificaciones.find(x =>
+    x.id === fila.id_clasificacion ||
+    x.nombre === fila.clasificacion
+  );
+
+  const caja = catalogos.cajas.find(x =>
+    String(x.cajaNumero) === String(fila.caja)
+  );
+
+  setSel([fila.id]);
+  setErr({});
+  setEditId(null);
+
+  setV({
+    numero_expediente: fila.numero_expediente || '',
+    titulo: fila.titulo || '',
+    codigo_etiqueta: fila.codigo_etiqueta || '',
+    clasificacion: clasificacion?.id ?? '',
+    caja: caja?.cajaNumero ?? '',
+    fecha_apertura: fila.fecha_apertura || '',
+    estado: fila.estado || 'Activo'
+  });
+
+  toast('Expediente seleccionado. El marbete se actualizó automáticamente.', 'info');
+};
+
+const seleccionarCajaAlmacenamiento = fila => {
+  if (m.path !== '/almacenamiento') return;
+
+  setSel([fila.id]);
+  setErr({});
+  setEditId(null);
+
+  setV({
+    numero_caja: fila.numero_caja ?? '',
+    codigo_etiqueta: fila.codigo_etiqueta ?? '',
+    ubicacion: fila.ubicacion ?? '',
+    capacidad: fila.capacidad ?? '',
+    estado: fila.estado || 'Activo'
+  });
+};
 
   const save = async () => {
     const errores = {};
@@ -313,7 +432,49 @@ const reload = async () => {
       }
     }
 
-        if (m.api?.create && getToken()) {
+    if (m.path === '/prestamos' && getToken()) {
+      try {
+        const res = await registrarPrestamo(v);
+        setRows(await listarPrestamos());
+        reset();
+        return toast(res?.message || 'Salida registrada');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al registrar la salida', 'err');
+      }
+    }
+
+    if (m.path === '/vigencias' && getToken()) {
+      const editando = editRef.current;
+      try {
+        const res = editando
+          ? await actualizarVigencia(editando, v)
+          : await registrarVigencia(v);
+        setRows(await listarVigencias());
+        setSel([]);
+        reset();
+        return toast(res?.message || 'Vigencia guardada');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al guardar la vigencia', 'err');
+      }
+    }
+
+    if (m.path === '/clasificacion' && getToken()) {
+      const editando = editRef.current;
+      try {
+        const res = editando
+          ? await actualizarClasificacion(editando, v, rows)
+          : await crearClasificacion(v, rows);
+        // Se recarga todo: si se renombró un nivel, sus hijos deben mostrar el nombre nuevo
+        setRows(await listarClasificaciones());
+        setSel([]);
+        reset();
+        return toast(res?.message || 'Estructura archivística actualizada');
+      } catch (ex) {
+        return toast(ex?.message || 'Error al guardar el nivel archivístico', 'err');
+      }
+    }
+
+    if (m.api?.create && getToken()) {
       try {
         const body = m.api.toBody ? m.api.toBody(v) : v;
 
@@ -366,8 +527,12 @@ const reload = async () => {
 
   const run = b => {
     const go = () => {
+      if (b.a === 'save' && (m.path === '/clasificacion' || m.path === '/vigencias')) {
+        editRef.current = null; // "Agregar" siempre crea
+      }
       if (b.a === 'save' || b.a === 'cfg') return save();
       if (b.a === 'open') {
+        if (MODULOS_GESTION.includes(m.path)) return setOpen(true);
         setEditId(null);
         setV({});
         setErr({});
@@ -379,6 +544,7 @@ const reload = async () => {
       }
       if (b.a === 'cancel') {
         reset();
+        if (MODULOS_GESTION.includes(m.path)) return toast('Cambios cancelados', 'info');
         setQ('');
         setFl({});
         return toast('Cambios y filtros restablecidos', 'info');
@@ -444,6 +610,110 @@ const reload = async () => {
         return;
       }
 
+      if (b.a === 'devolver' && m.path === '/prestamos' && getToken()) {
+        if (!needSel()) return;
+        const ids = [...sel];
+        (async () => {
+          const { hechos, errorMensaje } = await devolverPrestamos(ids, rows);
+          try {
+            setRows(await listarPrestamos());
+          } catch {
+            // se conserva la tabla actual
+          }
+          setSel(s => s.filter(id => !hechos.includes(id)));
+          if (hechos.length === ids.length) return toast('Devolución registrada correctamente');
+          toast(`Se registraron ${hechos.length} de ${ids.length}. ${errorMensaje}`.trim(), 'err');
+        })();
+        return;
+      }
+
+      if (b.a === 'vale' && m.path === '/prestamos') {
+        if (!needSel()) return;
+        if (sel.length > 1) return toast('Selecciona un solo préstamo para imprimir su vale', 'err');
+        const fila = rows.find(r => r.id === sel[0]);
+        if (!fila) return;
+        if (!imprimirVale(fila)) {
+          return toast('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes e inténtalo de nuevo.', 'err');
+        }
+        return toast('Vale de préstamo listo para imprimir', 'info');
+      }
+
+      if (b.a === 'edit' && m.path === '/vigencias') {
+        if (!needSel()) return;
+        if (sel.length > 1) return toast('Selecciona una sola vigencia para modificarla', 'err');
+        const fila = rows.find(r => r.id === sel[0]);
+        if (!fila) return;
+        if (editRef.current === fila.id) return save(); // segunda pulsación: guarda los cambios
+        editRef.current = fila.id;
+        setErr({});
+        setV({
+          numero_expediente: fila.numero_expediente,
+          fecha_inicio: fila.fecha_inicio,
+          fecha_vencimiento: fila.fecha_vencimiento
+        });
+        return toast(
+          'Datos cargados en el formulario. Modifícalos y vuelve a presionar "Modificar Vigencia" para guardar.',
+          'info'
+        );
+      }
+
+      if ((b.a === 'alertas' || b.a === 'vencidos') && m.path === '/vigencias') {
+        if (!getToken()) return toast('Inicia sesión para consultar las alertas', 'err');
+        (async () => {
+          try {
+            const [lista, resumen] = await Promise.all([listarVigencias(), obtenerResumenVigencias()]);
+            setRows(lista);
+            if (b.a === 'alertas') {
+              return toast(
+                `Alertas: ${resumen.vencidos} vencido(s), ${resumen.proximos} próximo(s) a vencer, ${resumen.vigentes} vigente(s)`,
+                resumen.vencidos ? 'err' : 'info'
+              );
+            }
+            if (!resumen.vencidos) return toast('No hay expedientes vencidos', 'info');
+            const resto = resumen.vencidos > resumen.numerosVencidos.length ? ', …' : '';
+            toast(`Expedientes vencidos (${resumen.vencidos}): ${resumen.numerosVencidos.join(', ')}${resto}`, 'err');
+          } catch (ex) {
+            toast(ex?.message || 'Error al consultar las alertas', 'err');
+          }
+        })();
+        return;
+      }
+
+      if (b.a === 'edit' && m.path === '/clasificacion') {
+        if (!needSel()) return;
+        if (sel.length > 1) return toast('Selecciona un solo nivel para modificarlo', 'err');
+        const fila = rows.find(r => r.id === sel[0]);
+        if (!fila) return;
+        if (editRef.current === fila.id) return save(); // segunda pulsación: guarda los cambios
+        editRef.current = fila.id;
+        setErr({});
+        setV({
+          nombre: fila.nombre,
+          padre: fila.padre,
+          descripcion: fila.descripcion,
+          plazo: fila.plazo === '' ? '' : String(fila.plazo),
+          destino: fila.destino,
+          fundamento: fila.fundamento
+        });
+        return toast(
+          'Datos cargados en el formulario. Modifícalos y vuelve a presionar "Modificar Estructura" para guardar.',
+          'info'
+        );
+      }
+
+      if (b.a === 'sync' && m.path === '/clasificacion') {
+        if (!getToken()) return toast('Inicia sesión para sincronizar con el servidor', 'err');
+        (async () => {
+          try {
+            setRows(await listarClasificaciones());
+            toast('Árbol archivístico sincronizado con el servidor');
+          } catch (ex) {
+            toast(ex?.message || 'Error al sincronizar el árbol archivístico', 'err');
+          }
+        })();
+        return;
+      }
+
       if (b.a === 'del' || b.a === 'clear') {
         // En Digitalización "Limpiar Lote" solo limpia el formulario: nunca borra en el servidor
         if (b.a === 'clear' && m.path === '/digitalizacion') {
@@ -456,27 +726,30 @@ const reload = async () => {
           return toast('Lote limpiado', 'info');
         }
         const ids = b.a === 'clear' ? rows.map(r => r.id) : sel;
-        if (!ids.length) return toast('Selecciona al menos un registro para eliminar', 'err');
+        if (!ids.length) {
+          return toast(
+            MODULOS_GESTION.includes(m.path)
+              ? 'No hay registros para quitar'
+              : 'Selecciona al menos un registro para eliminar',
+            'err'
+          );
+        }
         return setCf({
           msg: '¿Quitar el/los registro(s) seleccionado(s)?',
           ok: async () => {
-            if (m.path === '/clasificacion' && m.api?.remove && getToken()) {
+            if (m.path === '/clasificacion' && getToken()) {
+              const { eliminados, errorMensaje } = await eliminarClasificaciones(ids, rows);
               try {
-                for (const id of ids) {
-                  await apiFetch(m.api.remove(id), {
-                    method: 'DELETE'
-                  });
-                }
-
-                await reload();
-                setSel([]);
-                return toast('Clasificación eliminada correctamente');
-              } catch (ex) {
-                return toast(
-                  ex?.message || 'No se pudo eliminar la clasificación',
-                  'err'
-                );
+                setRows(await listarClasificaciones());
+              } catch {
+                setRows(r => r.filter(x => !eliminados.includes(x.id)));
               }
+              setSel(s => s.filter(id => !eliminados.includes(id)));
+              if (eliminados.length === ids.length) return toast('Nivel(es) eliminado(s) correctamente');
+              return toast(
+                `Se eliminaron ${eliminados.length} de ${ids.length}. ${errorMensaje}`.trim(),
+                'err'
+              );
             }
 
             if (m.path === '/digitalizacion' && getToken()) {
@@ -559,7 +832,7 @@ const reload = async () => {
         return toast(b.l + ': registrado');
       }
 
-            if (b.a === 'custom') {
+      if (b.a === 'custom') {
         if (b.need && !needSel()) return;
 
         if (typeof b.run !== 'function') {
@@ -581,7 +854,12 @@ const reload = async () => {
 
       if (b.a === 'need' && !needSel()) return;
 
-      toast(b.l + ': acción todavía no implementada', 'info');
+      toast(
+        MODULOS_GESTION.includes(m.path)
+          ? b.l + ': se ejecutará al conectar el backend'
+          : b.l + ': acción todavía no implementada',
+        'info'
+      );
     };
 
     b.c ? setCf({ msg: `¿Confirmas la acción "${b.l}"?`, ok: go }) : go();
@@ -589,6 +867,38 @@ const reload = async () => {
 
   const act = (a, r) => {
     const accion = typeof a === 'string' ? a : a?.label || '';
+
+    if (m.path === '/prestamos' && getToken() && (accion === 'Registrar Devolución' || accion === 'Extender Plazo')) {
+      if (accion === 'Registrar Devolución') {
+        return setCf({
+          msg: `¿Confirmas la devolución del folio ${r.folio_pase_salida}?`,
+          ok: async () => {
+            const { hechos, errorMensaje } = await devolverPrestamos([r.id], rows);
+            try {
+              setRows(await listarPrestamos());
+            } catch {
+              // se conserva la tabla actual
+            }
+            if (hechos.length) return toast('Devolución registrada correctamente');
+            toast(errorMensaje, 'err');
+          }
+        });
+      }
+
+      if (!String(v.fecha_regreso || '').trim()) {
+        return toast('Captura la nueva Fecha de Regreso en el formulario y vuelve a presionar "Extender Plazo".', 'err');
+      }
+      return (async () => {
+        try {
+          const res = await extenderPlazoPrestamo(r.id, v.fecha_regreso);
+          setRows(await listarPrestamos());
+          setV(s => ({ ...s, fecha_regreso: '' }));
+          toast(res?.message || 'Plazo extendido');
+        } catch (ex) {
+          toast(ex?.message || 'Error al extender el plazo', 'err');
+        }
+      })();
+    }
 
     if (m.path === '/digitalizacion') {
       if (accion === 'Editar') {
@@ -767,16 +1077,17 @@ const reload = async () => {
     toast('Réplica digital asociada');
   };
 
-    const form = (
+  const form = (
     <div className="grid2">
       {m.fields.map(f => {
         let options = f.options;
 
         if (f.dyn) {
-          options = rows.map(r => ({
-            value: r.id,
-            label: r.nombre
-          }));
+          // Los módulos de gestión usan el nombre como valor; los demás usan el id
+          options =
+            MODULOS_GESTION.includes(m.path)
+              ? rows.map(r => r.nombre)
+              : rows.map(r => ({ value: r.id, label: r.nombre }));
         }
 
         if (f.catalog === 'clasificaciones') {
@@ -852,8 +1163,7 @@ const reload = async () => {
       )}
       {m.extra === 'upload' && <PDFPreview url={url} />}
       {m.extra === 'tree' && <TreeView rows={rows} />}
-      {m.extra === 'map' && <StorageMap />}
-      {m.extra === 'integrity' && <Integrity />}
+      {m.extra === 'map' && <StorageMap rows={rows} />}
       <div className="card pad">
         <div className="row wrap">
           {m.btns.map(b => (
@@ -886,6 +1196,21 @@ const reload = async () => {
           sel={sel}
           setSel={setSel}
           onAct={act}
+          onRowClick={
+  m.path === '/prestamos'
+    ? seleccionarPrestamo
+    : m.path === '/etiquetado'
+      ? seleccionarExpedienteEtiquetado
+      : m.path === '/almacenamiento'
+        ? seleccionarCajaAlmacenamiento
+        : undefined
+}
+selectedRowId={
+  ['/prestamos', '/etiquetado', '/almacenamiento'].includes(m.path) &&
+  sel.length === 1
+    ? sel[0]
+    : null
+}
         />
       )}
       {m.extra === 'timeline' && <Timeline log={log} />}

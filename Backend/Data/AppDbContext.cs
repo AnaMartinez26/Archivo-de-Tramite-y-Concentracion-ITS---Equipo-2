@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<Clasificacion> Clasificaciones { get; set; }
     public DbSet<Etiqueta> Etiquetas { get; set; }
     public DbSet<Disposicion> Disposiciones { get; set; }
+    public DbSet<Prestamo> Prestamos { get; set; }
+    //public DbSet<Auditoria> Auditorias { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
